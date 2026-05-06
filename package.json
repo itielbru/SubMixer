@@ -1,0 +1,41 @@
+{
+  "name": "submixer",
+  "version": "1.0.0",
+  "description": "SubMixer — Mux video tracks and external subtitles, with offset/speed sync.",
+  "main": "./out/main/index.js",
+  "author": "Itiel",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "clean:release": "node scripts/clean-release.cjs",
+    "build": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win nsis",
+    "build:newdir": "electron-vite build && electron-builder --win nsis --config.directories.output=release-new",
+    "build:portable": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win portable",
+    "build:dir": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win --dir",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "chardet": "^2.0.0",
+    "iconv-lite": "^0.6.3"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^31.2.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4"
+  }
+}

@@ -1,0 +1,43 @@
+appId: com.itiel.submixer
+productName: SubMixer
+copyright: Copyright © 2026 Itiel
+# Local builds without a cert; avoids pulling winCodeSign (7z + symlinks need Admin or Developer Mode)
+forceCodeSigning: false
+asar: true
+compression: maximum
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - "!**/*.map"
+  - "!**/*.ts"
+extraMetadata:
+  main: out/main/index.js
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  signAndEditExecutable: false
+  verifyUpdateCodeSignature: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SubMixer
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+fileAssociations:
+  - ext: mkv
+    description: Matroska Video
+    role: Editor
+  - ext: mp4
+    description: MPEG-4 Video
+    role: Editor
+publish: null
