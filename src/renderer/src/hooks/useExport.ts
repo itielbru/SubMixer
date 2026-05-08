@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ExportPlan, ExportProgress } from '@shared/types';
 
 export interface UseExportApi {
@@ -9,7 +9,7 @@ export interface UseExportApi {
     plan: ExportPlan,
     durationSec: number,
     externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
-  ) => Promise<{ ok: boolean; cancelled: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; cancelled: boolean; error?: string; stderrTail?: string }>;
   cancel: () => Promise<void>;
 }
 
@@ -17,18 +17,20 @@ export function useExport(onLog?: (line: string) => void): UseExportApi {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState('00:00');
+  const onLogRef = useRef(onLog);
+  onLogRef.current = onLog;
 
   useEffect(() => {
     const off1 = window.api.exporting.onProgress((p: ExportProgress) => {
       setProgress(p.percent);
       setEta(p.eta || '00:00');
     });
-    const off2 = window.api.exporting.onLog((line) => onLog?.(line));
+    const off2 = window.api.exporting.onLog((line) => onLogRef.current?.(line));
     return () => {
       off1();
       off2();
     };
-  }, [onLog]);
+  }, []);
 
   const start = useCallback<UseExportApi['start']>(async (plan, durationSec, externalSubs) => {
     setExporting(true);
@@ -36,7 +38,7 @@ export function useExport(onLog?: (line: string) => void): UseExportApi {
     setEta('00:00');
     try {
       const r = await window.api.exporting.run(plan, durationSec, externalSubs);
-      return r;
+      return r as { ok: boolean; cancelled: boolean; error?: string; stderrTail?: string };
     } finally {
       setExporting(false);
       setProgress(0);

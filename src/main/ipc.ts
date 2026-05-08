@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import {
   findBinaries,
   probe,
@@ -17,7 +18,7 @@ import {
   cancelActiveExport,
   buildCommandString,
 } from './ffmpeg';
-import { readSrtFile, writeTransformedSrt, clearTempSrt } from './srt';
+import { readSrtFile, countAssCues, writeTransformedSrt, clearTempSrt } from './srt';
 import {
   getSettings,
   setSetting,
@@ -46,7 +47,6 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
-let nextSubId = 1;
 
 export function registerIpc(): void {
   // ── FFmpeg discovery ─────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ export function registerIpc(): void {
     const result = await dialog.showOpenDialog(win!, {
       title: 'הוסף קובץ כתוביות',
       filters: [
-        { name: 'Subtitles', extensions: ['srt'] },
+        { name: 'Subtitles', extensions: ['srt', 'ass', 'ssa'] },
         { name: 'All files', extensions: ['*'] },
       ],
       properties: ['openFile', 'multiSelections'],
@@ -113,7 +113,9 @@ export function registerIpc(): void {
   ipcMain.handle('srt:add', async (_e, filePath: string): Promise<AddSubResult> => {
     try {
       const stat = await fs.stat(filePath);
-      const { cues, encoding } = await readSrtFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const isAss = ext === '.ass' || ext === '.ssa';
+      const format: 'srt' | 'ass' | 'ssa' = ext === '.ass' ? 'ass' : ext === '.ssa' ? 'ssa' : 'srt';
 
       const langMatch = path.basename(filePath).match(/\.(heb|eng|spa|ara|fre|fra|ger|deu|rus|jpn|por|ita|tur|nld|pol)\./i);
       const lang = langMatch ? langMatch[1].toLowerCase() : 'und';
@@ -130,20 +132,39 @@ export function registerIpc(): void {
         jpn: '日本語',
       };
 
+      let cueCount: number;
+      let encoding: string;
+      let cues;
+
+      if (isAss) {
+        const raw = await fs.readFile(filePath, 'utf-8');
+        cueCount = countAssCues(raw);
+        encoding = 'UTF-8';
+        cues = [];
+      } else {
+        const result = await readSrtFile(filePath);
+        cueCount = result.cues.length;
+        encoding = result.encoding;
+        cues = result.cues;
+      }
+
+      const normLang = lang === 'fra' ? 'fre' : lang === 'deu' ? 'ger' : lang;
+
       const sub: ExternalSub = {
-        id: `s${Date.now()}-${nextSubId++}`,
+        id: randomUUID(),
         path: filePath,
         name: path.basename(filePath),
         size: fmtSize(stat.size),
         sizeBytes: stat.size,
-        cues: cues.length,
-        lang: lang === 'fra' ? 'fre' : lang === 'deu' ? 'ger' : lang,
+        cues: cueCount,
+        lang: normLang,
         trackName: langName[lang] || lang.toUpperCase(),
         offset: 0,
         speed: 1,
         def: false,
         forced: false,
         encoding,
+        format,
       };
       return { ok: true, sub, cues };
     } catch (err) {
@@ -207,12 +228,17 @@ export function registerIpc(): void {
         }
       }
 
+      const stderrLines: string[] = [];
       const result = await runExport(
         plan,
         processed,
         durationSec,
         (p) => win?.webContents.send('export:progress', p),
-        (line) => win?.webContents.send('export:log', line)
+        (line) => {
+          stderrLines.push(line);
+          if (stderrLines.length > 80) stderrLines.shift();
+          win?.webContents.send('export:log', line);
+        }
       );
 
       if (result.ok) {
@@ -239,6 +265,9 @@ export function registerIpc(): void {
       }
       // Clean up the temp SRTs after export
       await clearTempSrt();
+      if (!result.ok && !result.cancelled) {
+        return { ...result, stderrTail: stderrLines.slice(-30).join('\n') };
+      }
       return result;
     } catch (err) {
       return { ok: false, code: null, cancelled: false, error: (err as Error).message };

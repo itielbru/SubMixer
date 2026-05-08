@@ -39,7 +39,7 @@ export function SubsDrawer({
             className={`ext-item ${s.id === activeSubId ? 'active' : ''}`}
             onClick={() => onSelectSub(s.id)}
           >
-            <span className="tag tag-sub">SRT</span>
+            <span className="tag tag-sub">{s.format?.toUpperCase() ?? 'SRT'}</span>
             <div className="ext-i">
               <div className="ext-n">{s.name}</div>
               <div className="ext-m mono">

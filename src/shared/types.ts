@@ -59,6 +59,8 @@ export interface ExternalSub {
   def: boolean;
   forced: boolean;
   encoding: string;
+  /** Subtitle file format detected from extension */
+  format: 'srt' | 'ass' | 'ssa';
 }
 
 export interface SrtCue {

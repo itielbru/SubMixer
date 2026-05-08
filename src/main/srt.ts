@@ -110,7 +110,41 @@ export async function readSrtFile(filePath: string): Promise<{
   };
 }
 
-// Build a transformed SRT for export ─────────────────────────────────────────
+// ASS/SSA support ──────────────────────────────────────────────────────────────────────────────
+
+function parseAssTs(ts: string): number {
+  // h:mm:ss.cc  (centiseconds)
+  const m = ts.trim().match(/^(\d+):(\d+):(\d+)\.(\d+)$/);
+  if (!m) return 0;
+  return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4]) / 100;
+}
+
+function fmtAssTs(sec: number): string {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const mm = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const cs = Math.round((sec - Math.floor(sec)) * 100);
+  return `${h}:${String(mm).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+export function countAssCues(text: string): number {
+  return (text.match(/^Dialogue:/gm) ?? []).length;
+}
+
+export function applyAssTransform(text: string, opts: { offset: number; speed: number }): string {
+  const { offset, speed } = opts;
+  return text.replace(
+    /^(Dialogue:[^,]*,)(\d+:\d+:\d+\.\d+)(,)(\d+:\d+:\d+\.\d+)(,.*)$/gm,
+    (_m, prefix, startTs, comma, endTs, rest) => {
+      const newStart = Math.max(0, parseAssTs(startTs) * speed + offset);
+      const newEnd = Math.max(0, parseAssTs(endTs) * speed + offset);
+      return `${prefix}${fmtAssTs(newStart)}${comma}${fmtAssTs(newEnd)}${rest}`;
+    }
+  );
+}
+
+// Build a transformed subtitle for export ────────────────────────────────────────
 
 const tempDir = () => path.join(app.getPath('userData'), 'temp', 'srt');
 
@@ -120,6 +154,17 @@ export async function writeTransformedSrt(
 ): Promise<string> {
   const dir = tempDir();
   await fs.mkdir(dir, { recursive: true });
+
+  const ext = path.extname(sourcePath).toLowerCase();
+  const isAss = ext === '.ass' || ext === '.ssa';
+
+  if (isAss) {
+    const raw = await fs.readFile(sourcePath, 'utf-8');
+    const transformed = opts.offset === 0 && opts.speed === 1 ? raw : applyAssTransform(raw, opts);
+    const outPath = path.join(dir, `${Date.now()}-${path.basename(sourcePath, ext)}${ext}`);
+    await fs.writeFile(outPath, transformed, 'utf-8');
+    return outPath;
+  }
 
   const { cues } = await readSrtFile(sourcePath);
   const transformed =

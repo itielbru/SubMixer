@@ -64,9 +64,9 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // Check FFmpeg availability AFTER first paint, so the user sees the UI
-  // and a non-blocking dialog if it's missing.
-  setTimeout(async () => {
+  // Check FFmpeg availability after the page finishes loading so the user
+  // sees the UI before any blocking dialog appears.
+  mainWindow!.webContents.once('did-finish-load', async () => {
     try {
       const status = await findBinaries();
       if (!status.available && mainWindow) {
@@ -90,7 +90,7 @@ app.whenReady().then(async () => {
     } catch {
       // ignore — the renderer can still call ffmpeg:status
     }
-  }, 1500);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
