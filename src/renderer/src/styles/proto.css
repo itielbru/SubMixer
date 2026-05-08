@@ -824,3 +824,54 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 .proto .pv-cue-nav .icon-btn { font-size: 14px; line-height: 1; }
 .proto .pv-cue-time.jumpable { cursor: pointer; }
 .proto .pv-cue-time.jumpable:hover { color: var(--accent); }
+
+/* Find/Replace */
+.proto .find-modal { width: min(640px, 92vw); }
+.proto .find-count { font-size: 12px; color: var(--text-3); margin: 8px 0 12px; }
+.proto .find-err { font-size: 12px; color: #e26060; margin: 8px 0 12px; }
+.proto .find-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--bg-2);
+}
+.proto .find-sample {
+  display: grid;
+  grid-template-columns: 36px 1fr 14px 1fr;
+  gap: 6px;
+  align-items: start;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.proto .find-idx { color: var(--text-3); }
+.proto .find-before { color: var(--text-2); }
+.proto .find-arrow { color: var(--text-3); text-align: center; }
+.proto .find-after { color: var(--accent); }
+
+/* Active replacement rules list */
+.proto .rules-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.proto .rule-item {
+  display: grid;
+  grid-template-columns: 1fr 14px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.proto .rule-find, .proto .rule-replace {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.proto .rule-arrow { color: var(--text-3); text-align: center; }
+.proto .rule-flags { color: var(--accent); font-size: 10px; padding: 0 4px; }
+.proto .rules-empty { font-size: 11px; color: var(--text-3); padding: 4px 0 8px; }

@@ -3,7 +3,31 @@ import * as path from 'path';
 import { app } from 'electron';
 import * as chardet from 'chardet';
 import * as iconv from 'iconv-lite';
-import type { SrtCue } from '@shared/types';
+import type { SrtCue, ReplaceRule } from '@shared/types';
+
+export function applyReplacements(text: string, rules?: ReplaceRule[]): string {
+  if (!rules || rules.length === 0) return text;
+  let out = text;
+  for (const r of rules) {
+    if (!r.find) continue;
+    try {
+      if (r.regex) {
+        const flags = 'g' + (r.caseSensitive ? '' : 'i');
+        out = out.replace(new RegExp(r.find, flags), r.replace);
+      } else {
+        if (r.caseSensitive) {
+          out = out.split(r.find).join(r.replace);
+        } else {
+          const escaped = r.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          out = out.replace(new RegExp(escaped, 'gi'), r.replace);
+        }
+      }
+    } catch {
+      // bad regex — skip rule
+    }
+  }
+  return out;
+}
 
 // SRT timestamp helpers ──────────────────────────────────────────────────────
 
@@ -150,7 +174,7 @@ const tempDir = () => path.join(app.getPath('userData'), 'temp', 'srt');
 
 export async function writeTransformedSrt(
   sourcePath: string,
-  opts: { offset: number; speed: number; encoding?: string }
+  opts: { offset: number; speed: number; encoding?: string; replacements?: ReplaceRule[] }
 ): Promise<string> {
   const dir = tempDir();
   await fs.mkdir(dir, { recursive: true });
@@ -160,15 +184,28 @@ export async function writeTransformedSrt(
 
   if (isAss) {
     const raw = await fs.readFile(sourcePath, 'utf-8');
-    const transformed = opts.offset === 0 && opts.speed === 1 ? raw : applyAssTransform(raw, opts);
+    let transformed = opts.offset === 0 && opts.speed === 1 ? raw : applyAssTransform(raw, opts);
+    if (opts.replacements && opts.replacements.length > 0) {
+      // Apply only on dialogue text (last comma-separated field)
+      transformed = transformed.replace(
+        /^(Dialogue:(?:[^,]*,){9})(.*)$/gm,
+        (_m, prefix, dialogue) => prefix + applyReplacements(dialogue, opts.replacements)
+      );
+    }
     const outPath = path.join(dir, `${Date.now()}-${path.basename(sourcePath, ext)}${ext}`);
     await fs.writeFile(outPath, transformed, 'utf-8');
     return outPath;
   }
 
   const { cues } = await readSrtFile(sourcePath);
-  const transformed =
+  let transformed =
     opts.offset === 0 && opts.speed === 1 ? cues : applyTransform(cues, opts);
+  if (opts.replacements && opts.replacements.length > 0) {
+    transformed = transformed.map((c) => ({
+      ...c,
+      text: applyReplacements(c.text, opts.replacements),
+    }));
+  }
   const text = serializeSrt(transformed);
 
   const outPath = path.join(

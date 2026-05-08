@@ -295,7 +295,7 @@ export default function App() {
     const r = await runExportJob(
       plan,
       file.durationSec,
-      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding }))
+      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements }))
     );
     if (r.ok) {
       toast('הייצוא הסתיים בהצלחה ✓', 'ok');
@@ -331,7 +331,7 @@ export default function App() {
     const r = await runExportJob(
       plan,
       file.durationSec,
-      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding }))
+      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements }))
     );
     if (r.ok) {
       toast('הייצוא הסתיים בהצלחה ✓', 'ok');
@@ -548,6 +548,7 @@ export default function App() {
             onRemoveSub={removeSub}
             onUpdateSub={updateSub}
             onReorderSubs={reorderSubs}
+            cues={cues}
           />
         )}
       </div>

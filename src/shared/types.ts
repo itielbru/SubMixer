@@ -44,6 +44,13 @@ export interface MediaFile {
   tracks: Track[];
 }
 
+export interface ReplaceRule {
+  find: string;
+  replace: string;
+  regex: boolean;
+  caseSensitive: boolean;
+}
+
 export interface ExternalSub {
   id: string;
   /** Original path on disk (still UTF-8 text content cached in memory) */
@@ -61,6 +68,8 @@ export interface ExternalSub {
   encoding: string;
   /** Subtitle file format detected from extension */
   format: 'srt' | 'ass' | 'ssa';
+  /** Find/replace rules applied during export */
+  replacements?: ReplaceRule[];
 }
 
 export interface SrtCue {

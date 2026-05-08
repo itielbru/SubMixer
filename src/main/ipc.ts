@@ -211,19 +211,22 @@ export function registerIpc(): void {
   // ── Export ───────────────────────────────────────────────────────────────
   ipcMain.handle('export:run', async (event, plan: ExportPlan, durationSec: number, externalSubs: {
     path: string; offset: number; speed: number; encoding?: string;
+    replacements?: import('@shared/types').ReplaceRule[];
   }[]) => {
     const win = senderWindow(event);
     try {
-      // Process each external SRT (offset/speed) → temp files
+      // Process each external SRT (offset/speed/replacements) → temp files
       const processed: string[] = [];
       for (const s of externalSubs) {
-        if (s.offset === 0 && s.speed === 1) {
+        const hasRules = s.replacements && s.replacements.length > 0;
+        if (s.offset === 0 && s.speed === 1 && !hasRules) {
           processed.push(s.path);
         } else {
           const out = await writeTransformedSrt(s.path, {
             offset: s.offset,
             speed: s.speed,
             encoding: s.encoding,
+            replacements: s.replacements,
           });
           processed.push(out);
         }

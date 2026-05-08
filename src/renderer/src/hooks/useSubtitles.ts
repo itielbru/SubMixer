@@ -1,5 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ExternalSub, SrtCue } from '@shared/types';
+import type { ExternalSub, SrtCue, ReplaceRule } from '@shared/types';
+
+function applyRules(text: string, rules?: ReplaceRule[]): string {
+  if (!rules || rules.length === 0) return text;
+  let out = text;
+  for (const r of rules) {
+    if (!r.find) continue;
+    try {
+      if (r.regex) {
+        const flags = 'g' + (r.caseSensitive ? '' : 'i');
+        out = out.replace(new RegExp(r.find, flags), r.replace);
+      } else {
+        const escaped = r.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const flags = 'g' + (r.caseSensitive ? '' : 'i');
+        out = out.replace(new RegExp(escaped, flags), r.replace);
+      }
+    } catch {
+      // bad regex — skip
+    }
+  }
+  return out;
+}
 import type { ToastKind } from './useToasts';
 
 export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
@@ -16,8 +37,14 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
       return;
     }
     void window.api.srt.read(sub.path).then((r) => {
-      if (r.ok && r.cues) setCues(r.cues);
-      else setCues([]);
+      if (r.ok && r.cues) {
+        const rules = sub.replacements;
+        setCues(
+          rules && rules.length
+            ? r.cues.map((c) => ({ ...c, text: applyRules(c.text, rules) }))
+            : r.cues
+        );
+      } else setCues([]);
     });
   }, [activeSubId, extSubs]);
 

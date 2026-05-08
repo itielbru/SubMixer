@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import type { ExternalSub } from '@shared/types';
+import type { ExternalSub, ReplaceRule, SrtCue } from '@shared/types';
 import { Dropdown } from './ui/Dropdown';
 import { HelpTip } from './ui/HelpTip';
 import { Knob } from './ui/Knob';
 import { Ico, I } from './ui/Icons';
+import { FindReplaceModal } from './modals/FindReplaceModal';
 
 interface Props {
   extSubs: ExternalSub[];
@@ -13,6 +14,7 @@ interface Props {
   onRemoveSub: (id: string) => void;
   onUpdateSub: (id: string, patch: Partial<ExternalSub>) => void;
   onReorderSubs: (fromId: string, toId: string) => void;
+  cues: SrtCue[];
 }
 
 export function SubsDrawer({
@@ -23,10 +25,12 @@ export function SubsDrawer({
   onRemoveSub,
   onUpdateSub,
   onReorderSubs,
+  cues,
 }: Props) {
   const sub = extSubs.find((s) => s.id === activeSubId);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [showFind, setShowFind] = useState(false);
   return (
     <aside className="col-right">
       <div className="ext-head">
@@ -197,6 +201,50 @@ export function SubsDrawer({
               options={['UTF-8', 'Windows-1255', 'Windows-1252', 'UTF-16']}
             />
           </div>
+          {sub.format === 'srt' && (
+            <>
+              <div className="ext-sect">
+                חפש והחלף
+                <button
+                  className="icon-btn small"
+                  type="button"
+                  style={{ marginInlineStart: 8 }}
+                  onClick={() => setShowFind(true)}
+                  title="הוסף חוק החלפה"
+                >
+                  <Ico d={I.plus} size={12} />
+                </button>
+              </div>
+              {sub.replacements && sub.replacements.length > 0 ? (
+                <div className="rules-list">
+                  {sub.replacements.map((r, i) => (
+                    <div key={i} className="rule-item">
+                      <span className="rule-find mono" title={r.find}>{r.find}</span>
+                      <span className="rule-arrow">→</span>
+                      <span className="rule-replace mono" title={r.replace}>{r.replace || '(מחיקה)'}</span>
+                      <span className="rule-flags mono">
+                        {r.regex ? 'rx' : ''}{r.caseSensitive ? ' Aa' : ''}
+                      </span>
+                      <button
+                        className="icon-btn small ghost"
+                        type="button"
+                        title="הסר חוק"
+                        onClick={() => {
+                          const next = (sub.replacements || []).filter((_, j) => j !== i);
+                          onUpdateSub(sub.id, { replacements: next });
+                        }}
+                      >
+                        <Ico d={I.x} size={11} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rules-empty">אין חוקים פעילים</div>
+              )}
+            </>
+          )}
+
           <div className="flag-row">
             <label className="cb" onClick={() => onUpdateSub(sub.id, { def: !sub.def })}>
               <span className={`cb-box ${sub.def ? 'on' : ''}`}>
@@ -218,6 +266,18 @@ export function SubsDrawer({
             </label>
           </div>
         </>
+      )}
+
+      {showFind && sub && (
+        <FindReplaceModal
+          cues={cues}
+          subName={sub.name}
+          onApply={(rule: ReplaceRule) => {
+            const next = [...(sub.replacements || []), rule];
+            onUpdateSub(sub.id, { replacements: next });
+          }}
+          onClose={() => setShowFind(false)}
+        />
       )}
     </aside>
   );

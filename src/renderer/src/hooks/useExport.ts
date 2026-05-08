@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ExportPlan, ExportProgress } from '@shared/types';
+import type { ExportPlan, ExportProgress, ReplaceRule } from '@shared/types';
 
 export interface UseExportApi {
   exporting: boolean;
@@ -8,7 +8,7 @@ export interface UseExportApi {
   start: (
     plan: ExportPlan,
     durationSec: number,
-    externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
+    externalSubs: { path: string; offset: number; speed: number; encoding?: string; replacements?: ReplaceRule[] }[]
   ) => Promise<{ ok: boolean; cancelled: boolean; error?: string; stderrTail?: string }>;
   cancel: () => Promise<void>;
 }
