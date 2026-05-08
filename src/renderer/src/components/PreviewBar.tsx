@@ -107,8 +107,13 @@ export function PreviewBar({
           {cues.map((c, i) => (
             <div
               key={i}
-              className="pv-tick"
+              className={`pv-tick ${i === idx ? 'active' : ''}`}
               style={{ insetInlineStart: `${(c.start / dur) * 100}%` }}
+              title={`#${i + 1} · ${fmtTimeMs(c.start)} — ${c.text.slice(0, 60)}`}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onPreviewT(c.start);
+              }}
             />
           ))}
         </div>
@@ -117,7 +122,37 @@ export function PreviewBar({
       <div className="pv-cue">
         <div className="pv-cue-row">
           <span className="pv-cue-label">מקורי</span>
-          <span className="pv-cue-time mono">
+          <div className="pv-cue-nav">
+            <button
+              type="button"
+              className="icon-btn small ghost"
+              disabled={cues.length === 0}
+              title="הכתובית הקודמת"
+              onClick={() => {
+                const prev = [...cues].reverse().find((c) => c.start < previewT - 0.05);
+                if (prev) onPreviewT(prev.start);
+              }}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="icon-btn small ghost"
+              disabled={cues.length === 0}
+              title="הכתובית הבאה"
+              onClick={() => {
+                const next = cues.find((c) => c.start > previewT + 0.05);
+                if (next) onPreviewT(next.start);
+              }}
+            >
+              ›
+            </button>
+          </div>
+          <span
+            className={`pv-cue-time mono ${currentCue ? 'jumpable' : ''}`}
+            title={currentCue ? 'קפוץ לתחילת הכתובית' : ''}
+            onClick={() => currentCue && onPreviewT(currentCue.start)}
+          >
             {currentCue
               ? `${fmtTimeMs(currentCue.start)} → ${fmtTimeMs(currentCue.end)}`
               : '—'}
