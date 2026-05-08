@@ -53,6 +53,20 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     [activeSubId]
   );
 
+  const reorderSubs = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setExtSubs((prev) => {
+      const from = prev.findIndex((s) => s.id === fromId);
+      const to = prev.findIndex((s) => s.id === toId);
+      if (from < 0 || to < 0) return prev;
+      undoStack.current = [...undoStack.current, prev].slice(-20);
+      const next = prev.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }, []);
+
   const undoSub = useCallback(() => {
     const stack = undoStack.current;
     if (stack.length === 0) return false;
@@ -82,5 +96,6 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     removeSub,
     resetSubs,
     undoSub,
+    reorderSubs,
   };
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ExternalSub } from '@shared/types';
 import { Dropdown } from './ui/Dropdown';
 import { HelpTip } from './ui/HelpTip';
@@ -12,6 +12,7 @@ interface Props {
   onAddSubs: () => void;
   onRemoveSub: (id: string) => void;
   onUpdateSub: (id: string, patch: Partial<ExternalSub>) => void;
+  onReorderSubs: (fromId: string, toId: string) => void;
 }
 
 export function SubsDrawer({
@@ -21,8 +22,11 @@ export function SubsDrawer({
   onAddSubs,
   onRemoveSub,
   onUpdateSub,
+  onReorderSubs,
 }: Props) {
   const sub = extSubs.find((s) => s.id === activeSubId);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   return (
     <aside className="col-right">
       <div className="ext-head">
@@ -36,7 +40,30 @@ export function SubsDrawer({
         {extSubs.map((s) => (
           <div
             key={s.id}
-            className={`ext-item ${s.id === activeSubId ? 'active' : ''}`}
+            className={`ext-item ${s.id === activeSubId ? 'active' : ''} ${
+              dragId === s.id ? 'dragging' : ''
+            } ${overId === s.id && dragId && dragId !== s.id ? 'drag-over' : ''}`}
+            draggable
+            onDragStart={(e) => {
+              setDragId(s.id);
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              if (dragId && dragId !== s.id) setOverId(s.id);
+            }}
+            onDragLeave={() => setOverId((cur) => (cur === s.id ? null : cur))}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (dragId && dragId !== s.id) onReorderSubs(dragId, s.id);
+              setDragId(null);
+              setOverId(null);
+            }}
+            onDragEnd={() => {
+              setDragId(null);
+              setOverId(null);
+            }}
             onClick={() => onSelectSub(s.id)}
           >
             <span className="tag tag-sub">{s.format?.toUpperCase() ?? 'SRT'}</span>

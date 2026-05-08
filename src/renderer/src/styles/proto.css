@@ -806,3 +806,12 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   gap: 8px;
   margin-top: 16px;
 }
+
+/* Subs drag-reorder */
+.proto .ext-item { cursor: grab; transition: transform .12s ease, opacity .12s ease, border-color .12s ease; }
+.proto .ext-item.dragging { opacity: 0.45; cursor: grabbing; }
+.proto .ext-item.drag-over {
+  border-color: var(--accent);
+  box-shadow: inset 0 2px 0 0 var(--accent);
+  transform: translateY(1px);
+}

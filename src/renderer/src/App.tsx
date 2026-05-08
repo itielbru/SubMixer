@@ -71,6 +71,7 @@ export default function App() {
     removeSub,
     resetSubs,
     undoSub,
+    reorderSubs,
   } = useSubtitles(toast);
 
   const {
@@ -546,6 +547,7 @@ export default function App() {
             onAddSubs={() => void pickSrtFiles()}
             onRemoveSub={removeSub}
             onUpdateSub={updateSub}
+            onReorderSubs={reorderSubs}
           />
         )}
       </div>
