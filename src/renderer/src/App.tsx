@@ -11,6 +11,7 @@ import { OpenDialog } from './components/modals/OpenDialog';
 import { HistoryModal } from './components/modals/HistoryModal';
 import { FFmpegCommandModal } from './components/modals/FFmpegCommand';
 import { SettingsModal } from './components/modals/Settings';
+import { ExportValidationModal, type Warning } from './components/modals/ExportValidation';
 import { useToasts } from './hooks/useToasts';
 import { useSettings } from './hooks/useSettings';
 import { useExport } from './hooks/useExport';
@@ -110,6 +111,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<Warning[] | null>(null);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
 
@@ -247,9 +249,78 @@ export default function App() {
     setShowCmd(true);
   };
 
+  const validateBeforeExport = useCallback((): Warning[] => {
+    const w: Warning[] = [];
+    const audioKept = tracks.filter((t) => t.kind === 'A' && t.keep);
+    const audioDef = audioKept.filter((t) => t.def);
+    const subKept = tracks.filter((t) => t.kind === 'S' && t.keep);
+    const allSubs = subKept.length + extSubs.length;
+
+    if (audioKept.length === 0)
+      w.push({ level: 'err', msg: 'אין מסלול אודיו מסומן לשמירה — הקובץ ייוצא ללא קול.' });
+    if (audioDef.length === 0 && audioKept.length > 0)
+      w.push({ level: 'warn', msg: 'אף מסלול אודיו אינו מסומן כברירת מחדל.' });
+    if (audioDef.length > 1)
+      w.push({ level: 'warn', msg: `יש ${audioDef.length} מסלולי אודיו מסומנים כברירת מחדל — נגנים יבחרו אחד שרירותית.` });
+
+    const subDef = [
+      ...subKept.filter((t) => t.def),
+      ...extSubs.filter((s) => s.def),
+    ];
+    if (subDef.length > 1)
+      w.push({ level: 'warn', msg: `יש ${subDef.length} כתוביות מסומנות כברירת מחדל.` });
+    if (allSubs === 0)
+      w.push({ level: 'info', msg: 'אין כתוביות בקובץ הסופי.' });
+
+    if (!destFolder.trim())
+      w.push({ level: 'err', msg: 'תיקיית יעד ריקה — בחר תיקייה ב"תוכן ויעד".' });
+
+    const estGB = estSize / (1024 * 1024);
+    if (estGB > 10)
+      w.push({ level: 'warn', msg: `אומדן גודל קובץ פלט ~${estGB.toFixed(1)}GB — ודא שיש מקום בכונן.` });
+
+    if (container.toLowerCase() === 'mp4' && extSubs.length > 0)
+      w.push({ level: 'warn', msg: 'MP4 תומך בכתוביות mov_text בלבד — ASS/SSA יומרו ועיצוב יאבד.' });
+
+    return w;
+  }, [tracks, extSubs, destFolder, estSize, container]);
+
+  const runActualExport = async () => {
+    if (!file) return;
+    const plan = buildPlan();
+    if (!plan) return;
+    pushLog(`מתחיל ייצוא · יעד: ${outName}`, 'info');
+    toast('ייצוא התחיל', 'info');
+    const r = await runExportJob(
+      plan,
+      file.durationSec,
+      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding }))
+    );
+    if (r.ok) {
+      toast('הייצוא הסתיים בהצלחה ✓', 'ok');
+      pushLog(`נכתב: ${outName}`, 'ok');
+    } else if (r.cancelled) {
+      toast('הייצוא בוטל', 'warn');
+      pushLog('הייצוא בוטל', 'warn');
+    } else {
+      toast(r.error || 'ייצוא נכשל', 'err');
+      pushLog(r.error || 'ייצוא נכשל', 'err');
+      if (r.stderrTail) {
+        setCmdStr(r.stderrTail);
+        setShowCmd(true);
+      }
+    }
+    await refreshHistory();
+  };
+
   const handleExport = async () => {
     if (!file || !title.trim()) {
       toast('חסר כותרת או קובץ', 'warn');
+      return;
+    }
+    const warnings = validateBeforeExport();
+    if (warnings.length > 0) {
+      setValidationWarnings(warnings);
       return;
     }
     const plan = buildPlan();
@@ -544,6 +615,17 @@ export default function App() {
           onClose={() => setShowSettings(false)}
           onChange={setOne}
           onChooseFolder={async () => window.api.dialog.chooseFolder(settings.defaultDestFolder)}
+        />
+      )}
+
+      {validationWarnings && (
+        <ExportValidationModal
+          warnings={validationWarnings}
+          onClose={() => setValidationWarnings(null)}
+          onConfirm={() => {
+            setValidationWarnings(null);
+            void runActualExport();
+          }}
         />
       )}
 

@@ -764,3 +764,45 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   color: var(--text-2);
   margin: 0 2px;
 }
+
+/* Export validation modal */
+.proto .validate-modal { width: min(560px, 92vw); }
+.proto .warn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.proto .warn-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.proto .warn-item.lvl-info { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.proto .warn-item.lvl-warn { border-color: #b58a2e; background: color-mix(in srgb, #b58a2e 10%, var(--bg-2)); }
+.proto .warn-item.lvl-err  { border-color: #c14b4b; background: color-mix(in srgb, #c14b4b 12%, var(--bg-2)); }
+.proto .warn-dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: currentColor;
+}
+.proto .warn-item.lvl-info .warn-dot { color: var(--accent); }
+.proto .warn-item.lvl-warn .warn-dot { color: #d6a13c; }
+.proto .warn-item.lvl-err  .warn-dot { color: #e26060; }
+.proto .warn-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
