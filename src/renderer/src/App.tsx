@@ -370,35 +370,84 @@ export default function App() {
         </aside>
 
         <main className="col-center">
-          <TracksList
-            tracks={tracks}
-            extSubs={extSubs}
-            activeId={activeId}
-            filter={filter}
-            search={search}
-            onFilter={setFilter}
-            onSearch={setSearch}
-            onSelect={setActiveId}
-            onToggleKeep={toggleKeep}
-            onSetDefault={setDefault}
-            onSetForced={setForced}
-          />
-          {file && (
-            <PreviewBar
-              durationSec={file.durationSec}
-              previewT={previewT}
-              onPreviewT={setPreviewTime}
-              playing={playing}
-              onTogglePlay={() => void handleTogglePlay()}
-              prepLoading={prepLoading}
-              prepPct={prepPct}
-              audioReady={previewAudioId !== null}
-              audioRef={audioRef}
-              audioUrl={audioUrl}
-              cues={cues}
-              subOffset={activeSub?.offset ?? 0}
-              subSpeed={activeSub?.speed ?? 1}
-            />
+          {!file ? (
+            <div className="welcome">
+              <div className="welcome-card">
+                <div className="welcome-icon">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <path d="m10 11 5 3-5 3z" fill="currentColor" />
+                  </svg>
+                </div>
+                <div className="welcome-title">ברוך הבא ל-SubMixer</div>
+                <div className="welcome-sub">
+                  ערכו ומזגו מסלולי וידאו, אודיו וכתוביות חיצוניות עם סנכרון מדויק —
+                  <br />
+                  הכול דרך FFmpeg של המערכת.
+                </div>
+                <div className="welcome-actions">
+                  <button className="btn primary" type="button" onClick={() => setShowOpen(true)}>
+                    פתח קובץ וידאו
+                  </button>
+                  <button className="btn" type="button" onClick={() => void pickSrtFiles()}>
+                    הוסף כתוביות
+                  </button>
+                </div>
+                <div className="welcome-steps">
+                  <div className="welcome-step">
+                    <div className="welcome-step-n">1</div>
+                    <div className="welcome-step-t">פתח וידאו</div>
+                    <div className="welcome-step-d">גרור או בחר קובץ MKV / MP4</div>
+                  </div>
+                  <div className="welcome-step">
+                    <div className="welcome-step-n">2</div>
+                    <div className="welcome-step-t">סדר מסלולים</div>
+                    <div className="welcome-step-d">בחר אילו לשמור, סנכרן כתוביות</div>
+                  </div>
+                  <div className="welcome-step">
+                    <div className="welcome-step-n">3</div>
+                    <div className="welcome-step-t">ייצא</div>
+                    <div className="welcome-step-d">קובץ חדש נשמר ביעד שבחרת</div>
+                  </div>
+                </div>
+                <div className="welcome-hint">
+                  טיפ: גרירת קובץ לכל מקום בחלון תפתח אותו · <kbd>Ctrl</kbd>+<kbd>O</kbd> לפתיחה ·{' '}
+                  <kbd>Ctrl</kbd>+<kbd>E</kbd> לייצוא
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <TracksList
+                tracks={tracks}
+                extSubs={extSubs}
+                activeId={activeId}
+                filter={filter}
+                search={search}
+                onFilter={setFilter}
+                onSearch={setSearch}
+                onSelect={setActiveId}
+                onToggleKeep={toggleKeep}
+                onSetDefault={setDefault}
+                onSetForced={setForced}
+              />
+              <PreviewBar
+                durationSec={file.durationSec}
+                previewT={previewT}
+                onPreviewT={setPreviewTime}
+                playing={playing}
+                onTogglePlay={() => void handleTogglePlay()}
+                prepLoading={prepLoading}
+                prepPct={prepPct}
+                audioReady={previewAudioId !== null}
+                audioRef={audioRef}
+                audioUrl={audioUrl}
+                cues={cues}
+                subOffset={activeSub?.offset ?? 0}
+                subSpeed={activeSub?.speed ?? 1}
+              />
+            </>
           )}
         </main>
 

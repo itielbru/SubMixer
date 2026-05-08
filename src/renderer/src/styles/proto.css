@@ -432,3 +432,335 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   padding: 8px 16px; font-size: 12px; display:flex; align-items:center; gap:12px; justify-content:center; }
 .proto .ffmpeg-banner a { color: var(--warn); text-decoration: underline; cursor: pointer; }
 .proto .ffmpeg-banner button { padding: 3px 8px; font-size: 11.5px; height: auto; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UI POLISH PASS — gradients, glass, animations, welcome screen
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Ambient gradient backdrop */
+.proto { position: relative; z-index: 0; }
+.proto::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(900px circle at 15% -10%, var(--accent-soft), transparent 55%),
+    radial-gradient(700px circle at 100% 110%, var(--accent-soft), transparent 50%);
+  opacity: .55;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Smoother scrollbars */
+.proto *::-webkit-scrollbar { width: 10px; height: 10px; }
+.proto *::-webkit-scrollbar-track { background: transparent; }
+.proto *::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.proto *::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: padding-box; border: 2px solid transparent; }
+
+/* Selection */
+.proto ::selection { background: var(--accent-soft); color: var(--text); }
+
+/* Topbar — soft bottom shadow */
+.proto .topbar { box-shadow: 0 1px 0 var(--border), 0 4px 18px -8px rgba(0,0,0,.18); position: relative; z-index: 2; }
+
+/* Brand mark — subtle inner shine */
+.proto .brand .mark::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 55%);
+  pointer-events: none;
+}
+.proto .brand .mark { position: relative; }
+
+/* Source card — softer card with hover lift */
+.proto .src-card { transition: transform .2s, box-shadow .2s, border-color .2s; }
+.proto .src-card:hover { transform: translateY(-1px); box-shadow: 0 8px 24px -10px rgba(0,0,0,.25); }
+
+/* Out card — accent halo */
+.proto .out-card { position: relative; transition: .2s; }
+.proto .out-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 11px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--accent), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: .6;
+  pointer-events: none;
+}
+
+/* Track rows — smoother transitions, subtle stripe on active */
+.proto .trow { transition: background .2s, opacity .25s, padding .15s; }
+.proto .trow:hover { background: linear-gradient(90deg, transparent, var(--surface-2) 6%, var(--surface-2) 94%, transparent); }
+.proto .trow[data-active="true"] {
+  background: linear-gradient(90deg, transparent, var(--accent-soft) 4%, var(--accent-soft) 96%, transparent);
+}
+.proto .trow .rail { transition: background .2s, height .2s; }
+.proto .trow[data-active="true"] .rail {
+  box-shadow: 0 0 14px var(--accent);
+}
+
+/* Tag pulse on hover */
+.proto .tag { transition: transform .2s; }
+.proto .trow:hover .tag { transform: scale(1.08); }
+
+/* Toggle smooth */
+.proto .tog, .proto .tog-knob { transition: background .25s cubic-bezier(.4,0,.2,1), inset-inline-end .25s cubic-bezier(.4,0,.2,1); }
+.proto .tog.on { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Flag buttons — subtle press */
+.proto .flag:active:not(.on) { transform: scale(.92); }
+
+/* Buttons — primary with pulse-when-ready */
+.proto .btn.primary {
+  background: linear-gradient(180deg, var(--accent), color-mix(in oklch, var(--accent), black 12%));
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 14px -6px var(--accent);
+}
+.proto .btn.primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 8px 18px -8px var(--accent);
+}
+.proto .btn.primary:active { transform: translateY(0); }
+
+@keyframes ready-pulse {
+  0%, 100% { box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 14px -6px var(--accent), 0 0 0 0 var(--accent-soft); }
+  50%      { box-shadow: 0 1px 0 rgba(255,255,255,.18) inset, 0 4px 14px -6px var(--accent), 0 0 0 8px transparent; }
+}
+.proto .btn.primary.ready { animation: ready-pulse 2.4s ease-in-out infinite; }
+
+/* Bigger, prettier progress bar */
+.proto .progress {
+  width: 240px;
+  height: 32px;
+  background: var(--bg-2);
+  border-radius: 8px;
+}
+.proto .progress-fill {
+  background: linear-gradient(90deg,
+    var(--accent),
+    color-mix(in oklch, var(--accent), white 18%),
+    var(--accent));
+  background-size: 200% 100%;
+  animation: progress-shimmer 1.6s linear infinite;
+}
+@keyframes progress-shimmer {
+  0%   { background-position:   0% 0; }
+  100% { background-position: 200% 0; }
+}
+.proto .progress-text { font-size: 12px; }
+
+/* Modals — true glass */
+.proto .modal-bg { backdrop-filter: blur(10px) saturate(1.3); -webkit-backdrop-filter: blur(10px) saturate(1.3); }
+.proto .modal {
+  background: color-mix(in oklch, var(--surface), transparent 6%);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.55), 0 0 0 1px var(--border);
+}
+
+/* Toast — softer shadow */
+.proto .toast {
+  background: color-mix(in oklch, var(--surface), transparent 8%);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 12px 30px -10px rgba(0,0,0,.35);
+}
+
+/* Knob — bigger value, inline unit */
+.proto .knob { transition: border-color .2s, background .2s; }
+.proto .knob:hover { border-color: var(--border-2); background: var(--surface-2); }
+.proto .knob-v {
+  font-size: 19px;
+  letter-spacing: -.025em;
+}
+.proto .knob-v small {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+
+/* Quick shift buttons — bigger, more tappable */
+.proto .quick-row .btn.compact {
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.proto .quick-row .btn.compact:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent), transparent 60%);
+}
+
+/* External sub item — softer */
+.proto .ext-item { transition: transform .15s, background .15s, border-color .15s; }
+.proto .ext-item:hover { transform: translateX(-2px); }
+.proto .ext-item.active { box-shadow: 0 0 0 2px var(--accent-soft); }
+
+/* Empty state in subs drawer — animated icon */
+.proto .ext-empty-i {
+  animation: float-y 3.5s ease-in-out infinite;
+}
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+
+/* Track tags — slight glow when keep on */
+.proto .trow[data-keep="true"] .tag { box-shadow: 0 0 0 1px color-mix(in currentColor, transparent 90%); }
+
+/* History row — softer */
+.proto .hist-row { transition: background .15s, transform .15s; }
+.proto .hist-row:hover { background: var(--bg-2); transform: translateX(-2px); }
+
+/* Drop overlay — animated dash */
+.proto .drop-overlay {
+  background: color-mix(in oklch, var(--accent), transparent 78%);
+  border-width: 3px;
+  animation: drop-fade .15s ease;
+}
+@keyframes drop-fade { from { opacity: 0; } to { opacity: 1; } }
+.proto .drop-overlay::before {
+  content: '⬇';
+  font-size: 56px;
+  margin-inline-end: 18px;
+  opacity: .8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WELCOME / EMPTY-FILE SCREEN
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.proto .welcome {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: auto;
+}
+
+.proto .welcome-card {
+  max-width: 580px;
+  width: 100%;
+  background: color-mix(in oklch, var(--surface), transparent 6%);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 42px 36px 36px;
+  text-align: center;
+  box-shadow: 0 24px 50px -20px rgba(0,0,0,.35);
+  transition: border-color .25s, transform .25s;
+}
+.proto .welcome-card:hover {
+  border-color: color-mix(in oklch, var(--accent), transparent 50%);
+  transform: translateY(-2px);
+}
+
+.proto .welcome-icon {
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 14px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in oklch, var(--accent), black 22%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-fg);
+  box-shadow: 0 8px 24px -6px var(--accent), inset 0 1px 0 rgba(255,255,255,.22);
+  animation: float-y 3.5s ease-in-out infinite;
+}
+
+.proto .welcome-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.proto .welcome-sub {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin-bottom: 26px;
+}
+
+.proto .welcome-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.proto .welcome-actions .btn { padding: 11px 20px; font-size: 13.5px; }
+
+.proto .welcome-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding-top: 22px;
+  border-top: 1px dashed var(--border);
+}
+.proto .welcome-step {
+  text-align: center;
+  padding: 10px 8px;
+}
+.proto .welcome-step-n {
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  font-family: var(--mono);
+}
+.proto .welcome-step-t {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.proto .welcome-step-d {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.proto .welcome-hint {
+  margin-top: 18px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.proto .welcome-hint kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  margin: 0 2px;
+}

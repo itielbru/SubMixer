@@ -79,7 +79,12 @@ export function BottomBar({
               <span className="ct mono">{audioCount}A</span>
               <span className="ct mono">{subCount}S</span>
             </div>
-            <button className="btn primary" type="button" onClick={onExport} disabled={!canExport}>
+            <button
+              className={`btn primary ${canExport ? 'ready' : ''}`}
+              type="button"
+              onClick={onExport}
+              disabled={!canExport}
+            >
               <Ico d={I.zap} size={13} /> ייצא קובץ
             </button>
           </>
