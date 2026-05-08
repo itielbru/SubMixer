@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import type { MediaFile, Track } from '@shared/types';
 import type { ToastKind } from './useToasts';
 
@@ -20,17 +20,10 @@ export function useMediaFile(
     if (undoStack.current.length > 50) undoStack.current.shift();
   }, [tracks]);
 
-  // Ctrl+Z undo
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        const prev = undoStack.current.pop();
-        if (prev) setTracks(prev);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+  const undoTracks = useCallback((): boolean => {
+    const prev = undoStack.current.pop();
+    if (prev) { setTracks(prev); return true; }
+    return false;
   }, []);
 
   const loadFile = useCallback(
@@ -134,5 +127,6 @@ export function useMediaFile(
     setDefault,
     setForced,
     pushUndo,
+    undoTracks,
   };
 }

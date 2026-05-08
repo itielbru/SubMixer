@@ -56,12 +56,29 @@ export async function setSettings(patch: Partial<AppSettings>): Promise<AppSetti
   return next;
 }
 
+async function pruneRecentFiles(recentFiles: string[]): Promise<string[]> {
+  const checks = await Promise.all(
+    recentFiles.map((p) => fs.access(p).then(() => p).catch(() => null))
+  );
+  return checks.filter(Boolean) as string[];
+}
+
 export async function addRecentFile(filePath: string): Promise<AppSettings> {
   const s = await getSettings();
-  const recent = [filePath, ...s.recentFiles.filter((p) => p !== filePath)].slice(0, 20);
+  const raw = [filePath, ...s.recentFiles.filter((p) => p !== filePath)].slice(0, 20);
+  const recent = await pruneRecentFiles(raw);
   const next = { ...s, recentFiles: recent };
   await save(next);
   return next;
+}
+
+export async function getRecentFiles(): Promise<string[]> {
+  const s = await getSettings();
+  const pruned = await pruneRecentFiles(s.recentFiles);
+  if (pruned.length !== s.recentFiles.length) {
+    await save({ ...s, recentFiles: pruned });
+  }
+  return pruned;
 }
 
 export async function addHistoryEntry(record: ExportRecord): Promise<AppSettings> {

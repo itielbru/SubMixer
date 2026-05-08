@@ -311,6 +311,7 @@ export async function extractAudioPreview(
     '-i', filePath,
     '-map', `0:${trackIndex}`,
     '-vn',
+    '-t', '600',
     '-c:a', 'libmp3lame',
     '-q:a', '5',
     outPath,
@@ -375,10 +376,21 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
   }
 
   args.push('-c:v', 'copy');
-  args.push('-c:a', 'copy');
+
   if (plan.container === 'mp4') {
+    // MP4 only supports aac / mp3 / alac / ac3. Transcode anything else per-stream.
+    const MP4_COMPAT = new Set(['aac', 'mp3', 'mp4a', 'alac', 'ac3']);
+    plan.audioTracks.forEach((a, idx) => {
+      const codec = (a.codec || '').toLowerCase();
+      if (!MP4_COMPAT.has(codec)) {
+        args.push(`-c:a:${idx}`, 'aac');
+      } else {
+        args.push(`-c:a:${idx}`, 'copy');
+      }
+    });
     args.push('-c:s', 'mov_text');
   } else {
+    args.push('-c:a', 'copy');
     args.push('-c:s', 'srt');
   }
 

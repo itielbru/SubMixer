@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ExternalSub, SrtCue } from '@shared/types';
 import type { ToastKind } from './useToasts';
 
@@ -6,6 +6,7 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
   const [extSubs, setExtSubs] = useState<ExternalSub[]>([]);
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
   const [cues, setCues] = useState<SrtCue[]>([]);
+  const undoStack = useRef<ExternalSub[][]>([]);
 
   // Reload SRT cues when active subtitle changes (ASS files have no parsed cues)
   useEffect(() => {
@@ -35,7 +36,10 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
   }, [toast]);
 
   const updateSub = useCallback((id: string, patch: Partial<ExternalSub>) => {
-    setExtSubs((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    setExtSubs((prev) => {
+      undoStack.current = [...undoStack.current, prev].slice(-20);
+      return prev.map((x) => (x.id === id ? { ...x, ...patch } : x));
+    });
   }, []);
 
   const removeSub = useCallback(
@@ -49,10 +53,20 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     [activeSubId]
   );
 
+  const undoSub = useCallback(() => {
+    const stack = undoStack.current;
+    if (stack.length === 0) return false;
+    const prev = stack[stack.length - 1];
+    undoStack.current = stack.slice(0, -1);
+    setExtSubs(prev);
+    return true;
+  }, []);
+
   const resetSubs = useCallback(() => {
     setExtSubs([]);
     setActiveSubId(null);
     setCues([]);
+    undoStack.current = [];
   }, []);
 
   const activeSub = extSubs.find((s) => s.id === activeSubId);
@@ -67,5 +81,6 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     updateSub,
     removeSub,
     resetSubs,
+    undoSub,
   };
 }

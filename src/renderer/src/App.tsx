@@ -56,6 +56,7 @@ export default function App() {
     toggleKeep,
     setDefault,
     setForced,
+    undoTracks,
   } = useMediaFile(toast, pushLog);
 
   const {
@@ -68,6 +69,7 @@ export default function App() {
     updateSub,
     removeSub,
     resetSubs,
+    undoSub,
   } = useSubtitles(toast);
 
   const {
@@ -134,6 +136,20 @@ export default function App() {
       destInited.current = true;
     }
   }, [settings.defaultDestFolder]);
+
+  // ── Unified Ctrl+Z ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        if (!undoSub()) undoTracks();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undoSub, undoTracks]);
 
   // ── File loading ──────────────────────────────────────────────────────────
   const loadFile = useCallback(
@@ -208,7 +224,7 @@ export default function App() {
       videoTrackId: v?.id ?? null,
       audioTracks: tracks
         .filter((t) => t.kind === 'A' && t.keep)
-        .map((t) => ({ id: t.id, lang: t.lang, def: t.def, forced: t.forced })),
+        .map((t) => ({ id: t.id, lang: t.lang, def: t.def, forced: t.forced, codec: t.codecName })),
       embeddedSubs: tracks
         .filter((t) => t.kind === 'S' && t.keep)
         .map((t) => ({ id: t.id, lang: t.lang, def: t.def, forced: t.forced })),

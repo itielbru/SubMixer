@@ -74,7 +74,7 @@ export interface ExportPlan {
   inputFile: string;
   externalSubs: { path: string; lang: string; def: boolean; forced: boolean; offset: number; speed: number; trackName: string; encoding: string; }[];
   videoTrackId: number | null;
-  audioTracks: { id: number; lang: string; def: boolean; forced: boolean; }[];
+  audioTracks: { id: number; lang: string; def: boolean; forced: boolean; codec?: string; }[];
   embeddedSubs: { id: number; lang: string; def: boolean; forced: boolean; }[];
   outputPath: string;
   container: 'mkv' | 'mp4';

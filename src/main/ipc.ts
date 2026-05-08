@@ -26,6 +26,7 @@ import {
   addRecentFile,
   addHistoryEntry,
   clearHistory,
+  getRecentFiles,
   userDataPath,
 } from './store';
 import type {
@@ -283,7 +284,11 @@ export function registerIpc(): void {
   });
 
   // ── Settings + history ───────────────────────────────────────────────────
-  ipcMain.handle('settings:get', async () => getSettings());
+  ipcMain.handle('settings:get', async () => {
+    const s = await getSettings();
+    const recentFiles = await getRecentFiles();
+    return { ...s, recentFiles };
+  });
   ipcMain.handle('settings:setOne', async <K extends keyof AppSettings>(_e: unknown, key: K, value: AppSettings[K]) => {
     return setSetting(key, value);
   });
