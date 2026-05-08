@@ -2,6 +2,7 @@ import React from 'react';
 import type { SrtCue } from '@shared/types';
 import { Ico, I } from './ui/Icons';
 import { fmtTime, fmtTimeMs } from '../lib/format';
+import { Waveform } from './Waveform';
 
 interface Props {
   durationSec: number;
@@ -18,6 +19,9 @@ interface Props {
   /** Sub offset / speed — adjust displayed sync row */
   subOffset: number;
   subSpeed: number;
+  /** Source for waveform peaks */
+  filePath: string | null;
+  audioTrackIndex: number | null;
 }
 
 function findCue(cues: SrtCue[], t: number): SrtCue | undefined {
@@ -38,6 +42,8 @@ export function PreviewBar({
   cues,
   subOffset,
   subSpeed,
+  filePath,
+  audioTrackIndex,
 }: Props) {
   const currentCue = findCue(cues, previewT);
   const adjT = previewT * subSpeed + subOffset;
@@ -73,49 +79,15 @@ export function PreviewBar({
           <Ico d={playing ? I.pause : I.play} size={14} />
         </button>
         <div className="pv-time mono">{fmtTime(previewT)}</div>
-        <div
-          className="pv-scrub"
-          onPointerDown={(e) => {
-            const el = e.currentTarget;
-            el.setPointerCapture(e.pointerId);
-            const update = (clientX: number) => {
-              const r = el.getBoundingClientRect();
-              const ratio = Math.max(0, Math.min(1, (r.right - clientX) / r.width));
-              onPreviewT(ratio * dur);
-            };
-            update(e.clientX);
-            const move = (ev: PointerEvent) => update(ev.clientX);
-            const up = () => {
-              el.removeEventListener('pointermove', move);
-              el.removeEventListener('pointerup', up);
-              el.removeEventListener('pointercancel', up);
-            };
-            el.addEventListener('pointermove', move);
-            el.addEventListener('pointerup', up);
-            el.addEventListener('pointercancel', up);
-          }}
-        >
-          <div className="pv-track"></div>
-          <div
-            className="pv-fill"
-            style={{ insetInlineStart: 0, width: `${(previewT / dur) * 100}%` }}
-          ></div>
-          <div
-            className="pv-thumb"
-            style={{ insetInlineStart: `${(previewT / dur) * 100}%` }}
-          ></div>
-          {cues.map((c, i) => (
-            <div
-              key={i}
-              className={`pv-tick ${i === idx ? 'active' : ''}`}
-              style={{ insetInlineStart: `${(c.start / dur) * 100}%` }}
-              title={`#${i + 1} · ${fmtTimeMs(c.start)} — ${c.text.slice(0, 60)}`}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                onPreviewT(c.start);
-              }}
-            />
-          ))}
+        <div className="pv-wave-wrap">
+          <Waveform
+            filePath={filePath}
+            audioTrackIndex={audioTrackIndex}
+            durationSec={dur}
+            previewT={previewT}
+            cues={cues}
+            onSeek={onPreviewT}
+          />
         </div>
         <div className="pv-time mono faint">{fmtTime(durationSec)}</div>
       </div>

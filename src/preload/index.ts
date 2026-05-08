@@ -46,6 +46,13 @@ const api = {
       ipcRenderer.on('preview:progress', handler);
       return () => ipcRenderer.removeListener('preview:progress', handler);
     },
+    peaks: (
+      filePath: string,
+      trackIndex: number,
+      durationSec: number,
+      buckets?: number
+    ): Promise<{ ok: boolean; peaks?: number[]; error?: string }> =>
+      ipcRenderer.invoke('preview:peaks', { filePath, trackIndex, durationSec, buckets }),
   },
 
   exporting: {

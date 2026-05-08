@@ -345,6 +345,76 @@ export async function extractAudioPreview(
   });
 }
 
+// ── Waveform peaks ──────────────────────────────────────────────────────────
+
+/** Stream PCM samples and bucket into min/max peaks (interleaved). */
+export async function extractPeaks(
+  filePath: string,
+  trackIndex: number,
+  durationSec: number,
+  buckets = 2000
+): Promise<Float32Array> {
+  const status = await findBinaries();
+  ensure(status);
+  const sampleRate = 4000;
+  const totalSamples = Math.max(1, Math.ceil(sampleRate * durationSec));
+  const samplesPerBucket = Math.max(1, Math.floor(totalSamples / buckets));
+
+  const args = [
+    '-y', '-hide_banner', '-loglevel', 'error',
+    '-i', filePath,
+    '-map', `0:${trackIndex}`,
+    '-vn',
+    '-ac', '1',
+    '-ar', String(sampleRate),
+    '-f', 's16le',
+    '-',
+  ];
+
+  return new Promise<Float32Array>((resolveP, rejectP) => {
+    const child = spawn(status.ffmpegPath, args, { windowsHide: true });
+    const peaks = new Float32Array(buckets * 2);
+    let bucket = 0;
+    let inBucket = 0;
+    let bMin = Infinity;
+    let bMax = -Infinity;
+    let leftover: Buffer | null = null;
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      let buf = leftover ? Buffer.concat([leftover, chunk]) : chunk;
+      const evenLen = buf.length & ~1;
+      leftover = buf.length > evenLen ? buf.subarray(evenLen) : null;
+      for (let i = 0; i < evenLen; i += 2) {
+        const sample = buf.readInt16LE(i) / 32768;
+        if (sample < bMin) bMin = sample;
+        if (sample > bMax) bMax = sample;
+        inBucket++;
+        if (inBucket >= samplesPerBucket && bucket < buckets) {
+          peaks[bucket * 2] = bMin === Infinity ? 0 : bMin;
+          peaks[bucket * 2 + 1] = bMax === -Infinity ? 0 : bMax;
+          bucket++;
+          inBucket = 0;
+          bMin = Infinity;
+          bMax = -Infinity;
+        }
+      }
+    });
+
+    child.on('error', rejectP);
+    child.on('close', (code) => {
+      if (code !== 0 && bucket === 0) {
+        rejectP(new Error(`ffmpeg peaks exited ${code}`));
+        return;
+      }
+      if (bucket < buckets && inBucket > 0) {
+        peaks[bucket * 2] = bMin === Infinity ? 0 : bMin;
+        peaks[bucket * 2 + 1] = bMax === -Infinity ? 0 : bMax;
+      }
+      resolveP(peaks);
+    });
+  });
+}
+
 // ── Export ──────────────────────────────────────────────────────────────────
 
 export interface ActiveExport {

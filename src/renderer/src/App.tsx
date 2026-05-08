@@ -534,6 +534,8 @@ export default function App() {
                 cues={cues}
                 subOffset={activeSub?.offset ?? 0}
                 subSpeed={activeSub?.speed ?? 1}
+                filePath={file.path}
+                audioTrackIndex={previewAudioId}
               />
             </>
           )}

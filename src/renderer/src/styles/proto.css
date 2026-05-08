@@ -875,3 +875,23 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 .proto .rule-arrow { color: var(--text-3); text-align: center; }
 .proto .rule-flags { color: var(--accent); font-size: 10px; padding: 0 4px; }
 .proto .rules-empty { font-size: 11px; color: var(--text-3); padding: 4px 0 8px; }
+
+/* Waveform */
+.proto .pv-wave-wrap { flex: 1 1 auto; min-width: 0; }
+.proto .waveform {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+.proto .waveform-loading {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 6px;
+  font-size: 10.5px;
+  color: var(--text-3);
+  background: rgba(0,0,0,0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}

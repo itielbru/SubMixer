@@ -14,6 +14,7 @@ import {
   findBinaries,
   probe,
   extractAudioPreview,
+  extractPeaks,
   runExport,
   cancelActiveExport,
   buildCommandString,
@@ -203,6 +204,22 @@ export function registerIpc(): void {
         path: outPath,
         url: 'submixer://preview?path=' + encodeURIComponent(outPath),
       };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  // ── Waveform peaks ───────────────────────────────────────────────────────
+  ipcMain.handle('preview:peaks', async (_e, args: {
+    filePath: string;
+    trackIndex: number;
+    durationSec: number;
+    buckets?: number;
+  }) => {
+    try {
+      const peaks = await extractPeaks(args.filePath, args.trackIndex, args.durationSec, args.buckets ?? 2000);
+      // Transferable array buffer
+      return { ok: true, peaks: Array.from(peaks) };
     } catch (err) {
       return { ok: false, error: (err as Error).message };
     }
