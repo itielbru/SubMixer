@@ -174,7 +174,13 @@ const tempDir = () => path.join(app.getPath('userData'), 'temp', 'srt');
 
 export async function writeTransformedSrt(
   sourcePath: string,
-  opts: { offset: number; speed: number; encoding?: string; replacements?: ReplaceRule[] }
+  opts: {
+    offset: number;
+    speed: number;
+    encoding?: string;
+    replacements?: ReplaceRule[];
+    cueOverrides?: Record<number, { dStart: number; dEnd: number }>;
+  }
 ): Promise<string> {
   const dir = tempDir();
   await fs.mkdir(dir, { recursive: true });
@@ -205,6 +211,14 @@ export async function writeTransformedSrt(
       ...c,
       text: applyReplacements(c.text, opts.replacements),
     }));
+  }
+  if (opts.cueOverrides) {
+    const ov = opts.cueOverrides;
+    transformed = transformed.map((c) => {
+      const d = ov[c.idx];
+      if (!d) return c;
+      return { ...c, start: Math.max(0, c.start + d.dStart), end: Math.max(0, c.end + d.dEnd) };
+    });
   }
   const text = serializeSrt(transformed);
 

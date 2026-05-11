@@ -895,3 +895,25 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   padding: 2px 6px;
   border-radius: 4px;
 }
+
+/* Waveform sync mode segmented control */
+.proto .pv-mode-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-inline-start: 10px;
+}
+.proto .pv-mode-btn {
+  background: none;
+  border: none;
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  border-inline-end: 1px solid var(--border);
+}
+.proto .pv-mode-btn:last-child { border-inline-end: none; }
+.proto .pv-mode-btn:hover { color: var(--text-1); background: var(--bg-2); }
+.proto .pv-mode-btn.active { background: var(--accent); color: #fff; }

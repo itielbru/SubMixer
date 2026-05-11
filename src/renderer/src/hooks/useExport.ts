@@ -8,7 +8,7 @@ export interface UseExportApi {
   start: (
     plan: ExportPlan,
     durationSec: number,
-    externalSubs: { path: string; offset: number; speed: number; encoding?: string; replacements?: ReplaceRule[] }[]
+    externalSubs: { path: string; offset: number; speed: number; encoding?: string; replacements?: ReplaceRule[]; cueOverrides?: Record<number, { dStart: number; dEnd: number }> }[]
   ) => Promise<{ ok: boolean; cancelled: boolean; error?: string; stderrTail?: string }>;
   cancel: () => Promise<void>;
 }

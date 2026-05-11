@@ -39,10 +39,19 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     void window.api.srt.read(sub.path).then((r) => {
       if (r.ok && r.cues) {
         const rules = sub.replacements;
+        const overrides = sub.cueOverrides;
+        const offset = sub.offset;
+        const speed = sub.speed;
         setCues(
-          rules && rules.length
-            ? r.cues.map((c) => ({ ...c, text: applyRules(c.text, rules) }))
-            : r.cues
+          r.cues.map((c) => {
+            const ov = overrides?.[c.idx];
+            return {
+              idx: c.idx,
+              start: Math.max(0, c.start * speed + offset + (ov?.dStart ?? 0)),
+              end: Math.max(0, c.end * speed + offset + (ov?.dEnd ?? 0)),
+              text: rules && rules.length ? applyRules(c.text, rules) : c.text,
+            };
+          })
         );
       } else setCues([]);
     });
@@ -79,6 +88,32 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     },
     [activeSubId]
   );
+
+  const setCueOverride = useCallback(
+    (subId: string, cueIdx: number, dStart: number, dEnd: number) => {
+      setExtSubs((prev) => {
+        undoStack.current = [...undoStack.current, prev].slice(-20);
+        return prev.map((s) => {
+          if (s.id !== subId) return s;
+          const next = { ...(s.cueOverrides || {}) };
+          if (dStart === 0 && dEnd === 0) {
+            delete next[cueIdx];
+          } else {
+            next[cueIdx] = { dStart, dEnd };
+          }
+          return { ...s, cueOverrides: next };
+        });
+      });
+    },
+    []
+  );
+
+  const clearCueOverrides = useCallback((subId: string) => {
+    setExtSubs((prev) => {
+      undoStack.current = [...undoStack.current, prev].slice(-20);
+      return prev.map((s) => (s.id === subId ? { ...s, cueOverrides: {} } : s));
+    });
+  }, []);
 
   const reorderSubs = useCallback((fromId: string, toId: string) => {
     if (fromId === toId) return;
@@ -124,5 +159,7 @@ export function useSubtitles(toast: (msg: string, kind?: ToastKind) => void) {
     resetSubs,
     undoSub,
     reorderSubs,
+    setCueOverride,
+    clearCueOverrides,
   };
 }

@@ -72,6 +72,8 @@ export default function App() {
     resetSubs,
     undoSub,
     reorderSubs,
+    setCueOverride,
+    clearCueOverrides,
   } = useSubtitles(toast);
 
   const {
@@ -295,7 +297,7 @@ export default function App() {
     const r = await runExportJob(
       plan,
       file.durationSec,
-      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements }))
+      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements, cueOverrides: s.cueOverrides }))
     );
     if (r.ok) {
       toast('הייצוא הסתיים בהצלחה ✓', 'ok');
@@ -331,7 +333,7 @@ export default function App() {
     const r = await runExportJob(
       plan,
       file.durationSec,
-      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements }))
+      extSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding, replacements: s.replacements, cueOverrides: s.cueOverrides }))
     );
     if (r.ok) {
       toast('הייצוא הסתיים בהצלחה ✓', 'ok');
@@ -536,6 +538,17 @@ export default function App() {
                 subSpeed={activeSub?.speed ?? 1}
                 filePath={file.path}
                 audioTrackIndex={previewAudioId}
+                activeSubId={activeSubId}
+                hasCueOverrides={!!activeSub?.cueOverrides && Object.keys(activeSub.cueOverrides).length > 0}
+                onShiftAll={(newOffset) => {
+                  if (activeSub) updateSub(activeSub.id, { offset: newOffset });
+                }}
+                onShiftCue={(cueIdx, dStart, dEnd) => {
+                  if (activeSub) setCueOverride(activeSub.id, cueIdx, dStart, dEnd);
+                }}
+                onClearCueOverrides={() => {
+                  if (activeSub) clearCueOverrides(activeSub.id);
+                }}
               />
             </>
           )}

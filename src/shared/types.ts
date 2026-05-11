@@ -70,6 +70,8 @@ export interface ExternalSub {
   format: 'srt' | 'ass' | 'ssa';
   /** Find/replace rules applied during export */
   replacements?: ReplaceRule[];
+  /** Per-cue time overrides (additional delta seconds) keyed by cue idx */
+  cueOverrides?: Record<number, { dStart: number; dEnd: number }>;
 }
 
 export interface SrtCue {

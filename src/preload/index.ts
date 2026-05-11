@@ -59,7 +59,7 @@ const api = {
     run: (
       plan: ExportPlan,
       durationSec: number,
-      externalSubs: { path: string; offset: number; speed: number; encoding?: string; replacements?: import('@shared/types').ReplaceRule[] }[]
+      externalSubs: { path: string; offset: number; speed: number; encoding?: string; replacements?: import('@shared/types').ReplaceRule[]; cueOverrides?: Record<number, { dStart: number; dEnd: number }> }[]
     ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> =>
       ipcRenderer.invoke('export:run', plan, durationSec, externalSubs),
     cancel: (): Promise<boolean> => ipcRenderer.invoke('export:cancel'),

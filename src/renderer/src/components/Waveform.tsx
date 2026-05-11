@@ -1,16 +1,36 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { SrtCue } from '@shared/types';
 
+export type SyncMode = 'track' | 'cue';
+
 interface Props {
   filePath: string | null;
   audioTrackIndex: number | null;
   durationSec: number;
   previewT: number;
   cues: SrtCue[];
+  mode: SyncMode;
   onSeek: (t: number) => void;
+  /** drag whole track: delta seconds from drag start */
+  onTrackDelta: (delta: number, phase: 'start' | 'move' | 'end') => void;
+  /** drag single cue: cue idx + delta */
+  onCueDelta: (cueIdx: number, delta: number, phase: 'start' | 'move' | 'end') => void;
 }
 
-const HEIGHT = 56;
+const HEIGHT = 64;
+
+function canvasToTime(clientX: number, rect: DOMRect, durationSec: number): number {
+  // RTL: right edge = t=0, left edge = t=durationSec
+  const ratio = Math.max(0, Math.min(1, (rect.right - clientX) / rect.width));
+  return ratio * durationSec;
+}
+
+function hitCue(t: number, cues: SrtCue[]): SrtCue | null {
+  for (const c of cues) {
+    if (t >= c.start && t <= c.end) return c;
+  }
+  return null;
+}
 
 export function Waveform({
   filePath,
@@ -18,7 +38,10 @@ export function Waveform({
   durationSec,
   previewT,
   cues,
+  mode,
   onSeek,
+  onTrackDelta,
+  onCueDelta,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,7 +49,13 @@ export function Waveform({
   const [loading, setLoading] = useState(false);
   const [width, setWidth] = useState(0);
 
-  // Track container width for responsive rendering
+  // drag state
+  const dragRef = useRef<{
+    kind: 'scrub' | 'track' | 'cue';
+    startT: number;
+    cueIdx?: number;
+  } | null>(null);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -37,7 +66,6 @@ export function Waveform({
     return () => ro.disconnect();
   }, []);
 
-  // Fetch peaks when file/track changes
   useEffect(() => {
     setPeaks(null);
     if (!filePath || audioTrackIndex === null || durationSec <= 0) return;
@@ -50,15 +78,10 @@ export function Waveform({
         if (r.ok && r.peaks) setPeaks(Float32Array.from(r.peaks));
         setLoading(false);
       })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [filePath, audioTrackIndex, durationSec]);
 
-  // Draw waveform
   useEffect(() => {
     const cv = canvasRef.current;
     if (!cv || width === 0) return;
@@ -70,37 +93,36 @@ export function Waveform({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, HEIGHT);
 
-    // Background
     ctx.fillStyle = 'rgba(255,255,255,0.025)';
     ctx.fillRect(0, 0, width, HEIGHT);
 
-    // Center line
     const mid = HEIGHT / 2;
     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.beginPath();
-    ctx.moveTo(0, mid);
-    ctx.lineTo(width, mid);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(width, mid); ctx.stroke();
 
-    // Cue overlays
+    // Cue blocks
     if (durationSec > 0 && cues.length) {
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.18)';
       for (const c of cues) {
-        const x1 = (c.start / durationSec) * width;
-        const x2 = (c.end / durationSec) * width;
+        // RTL: t=0 is at right, t=dur is at left
+        const x1 = width - (c.end / durationSec) * width;
+        const x2 = width - (c.start / durationSec) * width;
+        ctx.fillStyle = mode === 'cue' ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.18)';
         ctx.fillRect(x1, 4, Math.max(1, x2 - x1), HEIGHT - 8);
+        if (mode === 'cue') {
+          ctx.strokeStyle = 'rgba(99,102,241,0.6)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x1, 4, Math.max(1, x2 - x1), HEIGHT - 8);
+        }
       }
     }
 
-    // Peaks (mirrored on RTL — draw from right)
-    if (peaks && peaks.length > 0) {
+    // Peaks
+    if (peaks) {
       const buckets = peaks.length / 2;
       ctx.fillStyle = 'rgba(255,255,255,0.55)';
       for (let x = 0; x < width; x++) {
-        const ratio = x / width;
-        // RTL: x=0 corresponds to time=durationSec; flip
-        const t = (1 - ratio) * durationSec;
-        const bIdx = Math.min(buckets - 1, Math.max(0, Math.floor((t / durationSec) * buckets)));
+        const ratio = (width - x) / width; // RTL
+        const bIdx = Math.min(buckets - 1, Math.max(0, Math.floor(ratio * buckets)));
         const min = peaks[bIdx * 2];
         const max = peaks[bIdx * 2 + 1];
         const y1 = mid - max * (mid - 2);
@@ -109,44 +131,78 @@ export function Waveform({
       }
     }
 
-    // Progress fill (RTL: fill from right)
+    // Progress + playhead (RTL)
     if (durationSec > 0) {
       const px = (previewT / durationSec) * width;
-      ctx.fillStyle = 'rgba(99, 102, 241, 0.10)';
+      ctx.fillStyle = 'rgba(99,102,241,0.10)';
       ctx.fillRect(width - px, 0, px, HEIGHT);
-      // Playhead
-      ctx.fillStyle = 'rgb(99, 102, 241)';
+      ctx.fillStyle = 'rgb(99,102,241)';
       ctx.fillRect(width - px - 1, 0, 2, HEIGHT);
     }
-  }, [peaks, width, cues, previewT, durationSec]);
+  }, [peaks, width, cues, previewT, durationSec, mode]);
 
-  const handlePointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const cv = canvasRef.current;
     if (!cv || durationSec <= 0) return;
     cv.setPointerCapture(e.pointerId);
-    const update = (clientX: number) => {
+    const rect = cv.getBoundingClientRect();
+    const t = canvasToTime(e.clientX, rect, durationSec);
+    const hit = hitCue(t, cues);
+
+    if (hit && mode !== 'track' && mode !== 'cue') {
+      // fallthrough to scrub
+    }
+
+    if (hit && mode === 'track') {
+      dragRef.current = { kind: 'track', startT: t };
+      onTrackDelta(0, 'start');
+    } else if (hit && mode === 'cue') {
+      dragRef.current = { kind: 'cue', startT: t, cueIdx: hit.idx };
+      onCueDelta(hit.idx, 0, 'start');
+    } else {
+      dragRef.current = { kind: 'scrub', startT: t };
+      onSeek(t);
+    }
+
+    const onMove = (ev: PointerEvent) => {
       const r = cv.getBoundingClientRect();
-      const ratio = Math.max(0, Math.min(1, (r.right - clientX) / r.width));
-      onSeek(ratio * durationSec);
+      const curT = canvasToTime(ev.clientX, r, durationSec);
+      const d = dragRef.current;
+      if (!d) return;
+      if (d.kind === 'scrub') {
+        onSeek(curT);
+      } else if (d.kind === 'track') {
+        onTrackDelta(curT - d.startT, 'move');
+      } else if (d.kind === 'cue' && d.cueIdx !== undefined) {
+        onCueDelta(d.cueIdx, curT - d.startT, 'move');
+      }
     };
-    update(e.clientX);
-    const move = (ev: PointerEvent) => update(ev.clientX);
-    const up = () => {
-      cv.removeEventListener('pointermove', move);
-      cv.removeEventListener('pointerup', up);
-      cv.removeEventListener('pointercancel', up);
+
+    const onUp = (ev: PointerEvent) => {
+      const r = cv.getBoundingClientRect();
+      const curT = canvasToTime(ev.clientX, r, durationSec);
+      const d = dragRef.current;
+      if (d?.kind === 'track') onTrackDelta(curT - d.startT, 'end');
+      else if (d?.kind === 'cue' && d.cueIdx !== undefined) onCueDelta(d.cueIdx, curT - d.startT, 'end');
+      dragRef.current = null;
+      cv.removeEventListener('pointermove', onMove);
+      cv.removeEventListener('pointerup', onUp);
+      cv.removeEventListener('pointercancel', onUp);
     };
-    cv.addEventListener('pointermove', move);
-    cv.addEventListener('pointerup', up);
-    cv.addEventListener('pointercancel', up);
+
+    cv.addEventListener('pointermove', onMove);
+    cv.addEventListener('pointerup', onUp);
+    cv.addEventListener('pointercancel', onUp);
   };
+
+  const cursor = mode === 'cue' || mode === 'track' ? 'grab' : 'pointer';
 
   return (
     <div className="waveform" ref={containerRef} style={{ height: HEIGHT }}>
       <canvas
         ref={canvasRef}
-        style={{ width: '100%', height: HEIGHT, display: 'block', cursor: 'pointer' }}
-        onPointerDown={handlePointer}
+        style={{ width: '100%', height: HEIGHT, display: 'block', cursor }}
+        onPointerDown={handlePointerDown}
       />
       {loading && <div className="waveform-loading mono">מחשב גל…</div>}
     </div>

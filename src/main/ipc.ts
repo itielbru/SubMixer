@@ -229,14 +229,15 @@ export function registerIpc(): void {
   ipcMain.handle('export:run', async (event, plan: ExportPlan, durationSec: number, externalSubs: {
     path: string; offset: number; speed: number; encoding?: string;
     replacements?: import('@shared/types').ReplaceRule[];
+    cueOverrides?: Record<number, { dStart: number; dEnd: number }>;
   }[]) => {
     const win = senderWindow(event);
     try {
-      // Process each external SRT (offset/speed/replacements) → temp files
       const processed: string[] = [];
       for (const s of externalSubs) {
         const hasRules = s.replacements && s.replacements.length > 0;
-        if (s.offset === 0 && s.speed === 1 && !hasRules) {
+        const hasOverrides = s.cueOverrides && Object.keys(s.cueOverrides).length > 0;
+        if (s.offset === 0 && s.speed === 1 && !hasRules && !hasOverrides) {
           processed.push(s.path);
         } else {
           const out = await writeTransformedSrt(s.path, {
@@ -244,6 +245,7 @@ export function registerIpc(): void {
             speed: s.speed,
             encoding: s.encoding,
             replacements: s.replacements,
+            cueOverrides: s.cueOverrides,
           });
           processed.push(out);
         }
