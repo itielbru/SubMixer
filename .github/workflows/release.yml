@@ -40,10 +40,19 @@ jobs:
         run: npx electron-vite build
 
       - name: Package and publish to GitHub Releases
-        run: npx electron-builder --win nsis portable --publish always
+        shell: pwsh
+        run: |
+          # Enable code signing only when a certificate secret is actually set.
+          # An empty CSC_LINK makes electron-builder fail trying to resolve it as
+          # a file path, so we set the signing vars conditionally.
+          if ($env:CSC_LINK_SECRET) {
+            $env:CSC_LINK = $env:CSC_LINK_SECRET
+            $env:CSC_KEY_PASSWORD = $env:CSC_KEY_PASSWORD_SECRET
+          }
+          npx electron-builder --win nsis portable --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Code signing — populate these repo secrets to produce signed builds.
-          # When unset, electron-builder produces unsigned artifacts.
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Populate these repo secrets to produce signed builds; left unset,
+          # builds are unsigned (no signing is attempted).
+          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
