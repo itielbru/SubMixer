@@ -1,59 +1,57 @@
 # SubMixer
 
-אפליקציית **Electron + React + TypeScript** לניהול מסלולים בקובץ וידאו, כתוביות חיצוניות (SRT), תצוגה מקדימה אודיו-only, וייצוא דרך **FFmpeg** מהמערכת.
+אפליקציית **Electron + React + TypeScript** לניהול מסלולים בקובץ וידאו, כתוביות חיצוניות (SRT/VTT/ASS), תצוגה מקדימה אודיו-only, וייצוא דרך **FFmpeg**.
 
 ## דרישות
 
-- [Node.js](https://nodejs.org/) (LTS מומלץ)
-- **FFmpeg** ו־**FFprobe** זמינים ב־**PATH** של Windows (לא מוטמעים באפליקציה)
+- [Node.js](https://nodejs.org/) LTS
+- **Windows** (יעד הבנייה)
+- **FFmpeg** — מוטמע באפליקציה (מומלץ) או זמין ב-**PATH**
 
-### התקנת FFmpeg ב-Windows
-
-1. הורד build מומלץ (למשל [gyan.dev FFmpeg builds](https://www.gyan.dev/ffmpeg/builds/) — *full* או *essential* לפי הצורך).
-2. חלץ לתיקייה קבועה, למשל `C:\ffmpeg`.
-3. הוסף ל־**PATH** את תיקיית ה־`bin` (למשל `C:\ffmpeg\bin`).
-4. פתח **PowerShell חדש** ובדוק:
-
-   ```powershell
-   ffmpeg -version
-   ffprobe -version
-   ```
-
-אם הפקודות לא מזוהות, בדוק שהנתיב נוסף להגדרות המערכת **ואין** רווחים/גרשיים שגויים.
-
-## פיתוח
+## התקנה
 
 ```powershell
 cd SubMixer
 npm install
+npm run setup:ffmpeg   # מוריד ffmpeg.exe + ffprobe.exe ל-ffmpeg-bin/
 npm run dev
 ```
+
+`setup:ffmpeg` אופציונלי אם FFmpeg כבר מותקן ב-PATH.
 
 ## בנייה ל-Windows
 
 ```powershell
-npm run build
+npm run setup:ffmpeg   # פעם אחת — נדרש לפני build אם אין FFmpeg ב-PATH
+npm run build          # NSIS installer ב-release/
+npm run build:portable # גרסה portable
 ```
 
-הפלטים (לפי `electron-builder.yml`) יופיעו בתיקייה `release/` — ייתכנו קובץ התקנה NSIS וגירסה portable.
+ה-binaries מ-`ffmpeg-bin/` נארזים אוטומטית ל-installer דרך `electron-builder`.
 
-הפרויקט מוגדר ל־**בנייה ללא חתימת קוד** (`forceCodeSigning` / `signAndEditExecutable`) כדי שלא יידרשו כלים של `winCodeSign` במחשב ביתי.
+## יכולות
 
-אם בנייה עדיין נכשלת עם `Cannot create symbolic link` בזמן חילוץ `winCodeSign`:
+- פתיחת וידאו (MKV, MP4, …) וניתוח מסלולים עם FFprobe
+- כתוביות חיצוניות: **SRT**, **VTT**, **ASS/SSA** עם offset + speed
+- ייצוא כתוביות מסונכרנות כ-SRT (בלי mux מלא)
+- תצוגה מקדימה: וידאו + אודיו + עריכת תזמון כתוביות (טיימליין)
+- ייצוא MKV/MP4 עם בחירת מסלולים
+- ממשק **עברית / English** (הגדרות → שפת ממשק)
+- ערכות נושא, היסטוריית ייצוא, drag & drop
 
-- הפעל **מצב מפתח** ב-Windows: **הגדרות → פרטיות ואבטחה → למפתחים → מצב מפתח** (מאפשר יצירת symlinks בלי הרשאות מנהל),  
-  **או** הרץ את PowerShell **כמנהל** פעם אחת,  
-  **או** מחק את התיקייה `%LOCALAPPDATA%\electron-builder\Cache\winCodeSign` ונסה שוב.
+## הערות
 
-### אייקון מותאם (אופציונלי)
+- **תצוגה מקדימה**: וידאו דרך Chromium; ל-AC3/DTS — חילוץ אוטומטי של ~90 שניות ראשונות לניגון מהיר, ואז אודיו מלא ברקע
+- **כתוביות תמונה** (PGS וכד'): לא נתמכות כקובץ חיצוני
+- תיקיית `ffmpeg/` בשורש (אם קיימת) היא קוד מקור FFmpeg — **לא** בשימוש; השתמש ב-`ffmpeg-bin/`
 
-ניתן ליצור `build/icon.ico` ולהוסיף ב־`electron-builder.yml` תחת `win:` ו־`nsis:` את השורות `icon` / `installerIcon` / `uninstallerIcon` לפי התיעוד של electron-builder.
+## פרטיות
 
-## הערות התנהגות
-
-- **תצוגה מקדימה**: אודיו בלבד (ללא פריימי וידאו); חילוץ קטע באמצעות FFmpeg לתיקיית `userData`.
-- **כתוביות**: קבצי טקסט/SRT נתמכים היטב; כתוביות תמונה (PGS) וכדומה דורשות טיפול נפרד ולא מובטח בכל הקונטיינרים.
+SubMixer לא אוסף ולא שולח נתוני שימוש. לוגים נשמרים מקומית בלבד
+(`userData/logs/`). בגרסה ארוזה, בדיקת עדכונים פונה ל-GitHub Releases.
 
 ## רישיון
 
-פרטי זכויות — כפי שמופיעים ב־`package.json` / `electron-builder.yml`.
+תוכנה **חופשית וקוד פתוח** — רישיון **MIT** (ראה `LICENSE`).
+SubMixer אורז את **FFmpeg** (GPLv3) ומריץ אותו כתהליך נפרד; ראה
+`THIRD-PARTY-LICENSES.md` לייחוס ולרישיונות צד-שלישי.
