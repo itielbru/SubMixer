@@ -29,7 +29,7 @@ export interface MediaFile {
   path: string;
   /** Just the file name */
   name: string;
-  /** Inferred title (falls back to file basename) */
+  /** File basename without extension (used as default output name/title) */
   title: string;
   /** Year extracted from name, "" if none */
   year: string;
@@ -72,10 +72,16 @@ export interface ExportPlan {
   inputFile: string;
   externalSubs: { path: string; lang: string; def: boolean; forced: boolean; offset: number; speed: number; trackName: string; encoding: string; }[];
   videoTrackId: number | null;
-  audioTracks: { id: number; lang: string; def: boolean; forced: boolean; }[];
-  embeddedSubs: { id: number; lang: string; def: boolean; forced: boolean; }[];
+  audioTracks: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
+  embeddedSubs: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
   outputPath: string;
+  /** Container metadata title (output filename without extension) */
+  metadataTitle: string;
   container: 'mkv' | 'mp4';
+  /** When set, burn this external sub (index into externalSubs) into the video
+   *  instead of muxing it as a soft track. Requires re-encoding the video.
+   *  null = normal soft-subtitle mux. */
+  burnInSubIndex: number | null;
 }
 
 export interface ExportProgress {
@@ -95,14 +101,40 @@ export interface ExportRecord {
   ok: boolean;
 }
 
+/** Subtitle quality warning thresholds (user configurable). */
+export interface CueWarningThresholds {
+  minCueDurationSec: number;
+  maxCueDurationSec: number;
+  maxCps: number;
+  hardMaxCps: number;
+  minGapSec: number;
+}
+
 export interface AppSettings {
   theme: 'dark' | 'light';
   accent: 'indigo' | 'graphite' | 'emerald' | 'amber' | 'crimson';
   font: 'Heebo' | 'Assistant';
+  lang: 'he' | 'en';
   defaultDestFolder: string;
+  /** When true, export into a subfolder named after title/year or SxxExx */
+  exportUseContentFolder: boolean;
   recentFiles: string[];
   history: ExportRecord[];
+  minCueDurationSec: number;
+  maxCueDurationSec: number;
+  maxCps: number;
+  hardMaxCps: number;
+  minGapSec: number;
+  /** Subtitle overlay appearance (preview only). */
+  subFontScale: number;
+  subColor: string;
+  subStyle: SubStyleMode;
+  subPosition: 'bottom' | 'top';
+  /** Burn the active external subtitle into the video on export (re-encodes). */
+  burnInSubs: boolean;
 }
+
+export type SubStyleMode = 'outline' | 'box' | 'none';
 
 export interface FFmpegStatus {
   available: boolean;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Ico, I } from '../ui/Icons';
+import { useT } from '../../hooks/useTranslation';
 
 interface OpenDialogProps {
   recents: string[];
@@ -9,30 +10,30 @@ interface OpenDialogProps {
 }
 
 export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogProps) {
+  const { t } = useT();
   const [drag, setDrag] = React.useState(false);
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-h">
-          <div className="modal-t">בחר קובץ וידאו</div>
+          <div className="modal-t">{t('open_dialog_title')}</div>
           <button className="icon-btn" onClick={onClose}>
             <Ico d={I.x} />
           </button>
         </div>
         <div className="modal-b">
-          <div className="dlg-hint">קבצים שנפתחו לאחרונה</div>
+          <div className="dlg-hint">{t('recent_hint')}</div>
           {recents.length === 0 && (
-            <div className="dlg-hint" style={{ padding: '6px 0' }}>אין קבצים אחרונים</div>
+            <div className="dlg-hint" style={{ padding: '6px 0' }}>
+              {t('no_recent_files')}
+            </div>
           )}
           {recents.map((p) => {
             const name = p.replace(/^.*[\\/]/, '');
             const folder = p.replace(/[\\/][^\\/]*$/, '');
             return (
-              <div
-                key={p}
-                className="dlg-row"
-                onClick={() => onPick(p)}
-              >
+              <div key={p} className="dlg-row" onClick={() => onPick(p)}>
                 <Ico d={I.file} size={16} />
                 <div className="dlg-i">
                   <div className="dlg-n">{name}</div>
@@ -42,7 +43,7 @@ export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogPro
             );
           })}
           <button className="btn ghost full mt8" onClick={onBrowse}>
-            <Ico d={I.folder} size={14} /> עיין בתיקייה…
+            <Ico d={I.folder} size={14} /> {t('browse_files')}
           </button>
           <div
             className="dlg-drop"
@@ -60,7 +61,7 @@ export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogPro
             }}
           >
             <Ico d={I.upload} size={20} />
-            <div>או גרור קובץ MKV / MP4 לכאן</div>
+            <div>{t('drop_mkv_mp4')}</div>
           </div>
         </div>
       </div>

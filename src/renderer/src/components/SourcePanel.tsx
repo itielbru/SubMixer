@@ -2,6 +2,7 @@ import React from 'react';
 import type { MediaFile } from '@shared/types';
 import { Section } from './ui/Section';
 import { Ico, I } from './ui/Icons';
+import { useT } from '../hooks/useTranslation';
 
 interface Props {
   file: MediaFile | null;
@@ -9,16 +10,18 @@ interface Props {
 }
 
 export function SourcePanel({ file, onOpenFile }: Props) {
+  const { t } = useT();
+
   if (!file) {
     return (
-      <Section title="מקור">
+      <Section title={t('source')}>
         <div className="src-empty">
           <div className="src-empty-i">
             <Ico d={I.file} size={22} />
           </div>
-          <div>לא נטען קובץ</div>
+          <div>{t('no_file_loaded')}</div>
           <button className="btn primary mt8" onClick={onOpenFile}>
-            <Ico d={I.folder} size={13} /> פתח קובץ וידאו
+            <Ico d={I.folder} size={13} /> {t('open_video').replace('…', '')}
           </button>
         </div>
       </Section>
@@ -26,7 +29,7 @@ export function SourcePanel({ file, onOpenFile }: Props) {
   }
 
   return (
-    <Section title="מקור">
+    <Section title={t('source')}>
       <div className="src-card">
         <div className="src-head">
           <Ico d={I.file} size={15} />
@@ -61,7 +64,7 @@ export function SourcePanel({ file, onOpenFile }: Props) {
           </span>
         </div>
         <button className="btn ghost full" onClick={onOpenFile}>
-          <Ico d={I.upload} size={12} /> החלף קובץ
+          <Ico d={I.upload} size={12} /> {t('replace_file')}
         </button>
       </div>
     </Section>

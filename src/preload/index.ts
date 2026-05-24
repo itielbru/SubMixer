@@ -9,6 +9,7 @@ import type {
   FFmpegStatus,
   SrtCue,
 } from '../shared/types';
+import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from '../shared/preview';
 
 const api = {
   ffmpeg: {
@@ -19,6 +20,8 @@ const api = {
 
   media: {
     probe: (filePath: string): Promise<ProbeResult> => ipcRenderer.invoke('media:probe', filePath),
+    url: (filePath: string): string =>
+      `submixer://media?path=${encodeURIComponent(filePath)}`,
   },
 
   dialog: {
@@ -26,25 +29,62 @@ const api = {
     openSrt: (): Promise<string[]> => ipcRenderer.invoke('dialog:openSrt'),
     chooseFolder: (current?: string): Promise<string | null> =>
       ipcRenderer.invoke('dialog:chooseFolder', current),
+    saveSrt: (defaultName?: string): Promise<string | null> =>
+      ipcRenderer.invoke('dialog:saveSrt', defaultName),
   },
 
   srt: {
     add: (filePath: string): Promise<AddSubResult> => ipcRenderer.invoke('srt:add', filePath),
     read: (filePath: string): Promise<{ ok: boolean; cues?: SrtCue[]; encoding?: string; size?: number; error?: string }> =>
       ipcRenderer.invoke('srt:read', filePath),
+    save: (args: {
+      sourcePath: string;
+      destPath: string;
+      offset: number;
+      speed: number;
+      encoding?: string;
+    }): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('srt:save', args),
+    writeCues: (
+      cues: SrtCue[],
+      baseName: string
+    ): Promise<{ ok: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke('srt:writeCues', cues, baseName),
   },
 
   preview: {
     extract: (
       filePath: string,
       trackIndex: number,
-      durationSec: number
-    ): Promise<{ ok: boolean; path?: string; url?: string; error?: string }> =>
-      ipcRenderer.invoke('preview:extract', { filePath, trackIndex, durationSec }),
-    onProgress: (cb: (p: ExportProgress) => void): (() => void) => {
-      const handler = (_e: IpcRendererEvent, p: ExportProgress) => cb(p);
+      durationSec: number,
+      phase: PreviewExtractPhase = 'full'
+    ): Promise<PreviewExtractResult> =>
+      ipcRenderer.invoke('preview:extract', { filePath, trackIndex, durationSec, phase }),
+    onProgress: (cb: (p: PreviewProgress) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, p: PreviewProgress) => cb(p);
       ipcRenderer.on('preview:progress', handler);
       return () => ipcRenderer.removeListener('preview:progress', handler);
+    },
+  },
+
+  peaks: {
+    get: (
+      filePath: string,
+      trackIndex: number,
+      durationSec: number
+    ): Promise<{
+      ok: boolean;
+      fromCache?: boolean;
+      peaksPerSec?: number;
+      durationSec?: number;
+      min?: Float32Array;
+      max?: Float32Array;
+      error?: string;
+    }> => ipcRenderer.invoke('peaks:get', { filePath, trackIndex, durationSec }),
+    onProgress: (cb: (pct: number) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, pct: number) => cb(pct);
+      ipcRenderer.on('peaks:progress', handler);
+      return () => ipcRenderer.removeListener('peaks:progress', handler);
     },
   },
 
@@ -56,8 +96,8 @@ const api = {
     ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> =>
       ipcRenderer.invoke('export:run', plan, durationSec, externalSubs),
     cancel: (): Promise<boolean> => ipcRenderer.invoke('export:cancel'),
-    cmdString: (plan: ExportPlan, externalSubPaths: string[]): Promise<string> =>
-      ipcRenderer.invoke('export:cmdString', plan, externalSubPaths),
+    cmdString: (plan: ExportPlan): Promise<string> =>
+      ipcRenderer.invoke('export:cmdString', plan),
     onProgress: (cb: (p: ExportProgress) => void): (() => void) => {
       const handler = (_e: IpcRendererEvent, p: ExportProgress) => cb(p);
       ipcRenderer.on('export:progress', handler);
@@ -100,6 +140,11 @@ const api = {
   app: {
     platform: (): Promise<string> => ipcRenderer.invoke('app:platform'),
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  },
+
+  debug: {
+    log: (payload: import('../shared/agent-debug').AgentDebugPayload): Promise<void> =>
+      ipcRenderer.invoke('debug:agentLog', payload),
   },
 };
 

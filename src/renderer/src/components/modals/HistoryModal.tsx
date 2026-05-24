@@ -1,6 +1,7 @@
 import React from 'react';
 import type { ExportRecord } from '@shared/types';
 import { Ico, I } from '../ui/Icons';
+import { useT } from '../../hooks/useTranslation';
 
 interface HistoryModalProps {
   history: ExportRecord[];
@@ -10,15 +11,17 @@ interface HistoryModalProps {
 }
 
 export function HistoryModal({ history, onClose, onClear, onShow }: HistoryModalProps) {
+  const { t } = useT();
+
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-h">
-          <div className="modal-t">היסטוריית ייצוא</div>
+          <div className="modal-t">{t('history_title')}</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {history.length > 0 && (
               <button className="btn ghost compact" onClick={onClear}>
-                <Ico d={I.trash} size={12} /> נקה
+                <Ico d={I.trash} size={12} /> {t('history_clear_btn')}
               </button>
             )}
             <button className="icon-btn" onClick={onClose}>
@@ -28,7 +31,7 @@ export function HistoryModal({ history, onClose, onClear, onShow }: HistoryModal
         </div>
         <div className="modal-b">
           {history.length === 0 ? (
-            <div className="hist-empty">עדיין לא בוצע ייצוא</div>
+            <div className="hist-empty">{t('history_empty')}</div>
           ) : (
             history.map((h, i) => (
               <div
@@ -45,7 +48,7 @@ export function HistoryModal({ history, onClose, onClear, onShow }: HistoryModal
                   </div>
                 </div>
                 <div className={`hist-tag ${h.ok ? 'ok' : 'err'}`}>
-                  {h.ok ? '✓ הצליח' : '✗ נכשל'}
+                  {h.ok ? t('hist_ok') : t('hist_fail')}
                 </div>
               </div>
             ))

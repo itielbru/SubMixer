@@ -3,7 +3,15 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { registerIpc, registerPreviewProtocol } from './ipc';
 import { buildMenu } from './menu';
-import { findBinaries } from './ffmpeg';
+import { findBinaries, killActiveProcesses } from './ffmpeg';
+import { getSettings } from './store';
+import { initLogger } from './logger';
+import { runStartupMaintenance } from './maintenance';
+import { initAutoUpdate } from './updater';
+import log from './logger';
+import { t } from '@shared/i18n';
+
+initLogger();
 
 // Register the custom protocol BEFORE app is ready so it's privileged.
 protocol.registerSchemesAsPrivileged([
@@ -15,7 +23,7 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow: BrowserWindow | null = null;
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -49,7 +57,8 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
-  buildMenu(mainWindow);
+  const s = await getSettings();
+  buildMenu(mainWindow, s.lang);
 }
 
 app.whenReady().then(async () => {
@@ -64,20 +73,25 @@ app.whenReady().then(async () => {
 
   createWindow();
 
+  // Best-effort housekeeping (orphaned temp files, cache quotas). Non-blocking.
+  void runStartupMaintenance();
+
+  // Check for updates in the background (packaged builds only).
+  initAutoUpdate();
+
   // Check FFmpeg availability AFTER first paint, so the user sees the UI
   // and a non-blocking dialog if it's missing.
   setTimeout(async () => {
     try {
       const status = await findBinaries();
       if (!status.available && mainWindow) {
+        const lang = (await getSettings()).lang;
         const choice = await dialog.showMessageBox(mainWindow, {
           type: 'warning',
-          title: 'FFmpeg חסר',
-          message: 'FFmpeg / FFprobe לא נמצאו במשתנה PATH של המערכת.',
-          detail:
-            'SubMixer דורש את FFmpeg כדי לבצע ניתוח קבצים, תצוגה מקדימה וייצוא.\n\n' +
-            'התקן את FFmpeg והוסף אותו ל-PATH, ואז הפעל את האפליקציה מחדש.',
-          buttons: ['פתח אתר ההורדה', 'המשך בלי', 'יציאה'],
+          title: t(lang, 'ffmpeg_missing_title'),
+          message: t(lang, 'ffmpeg_missing_msg'),
+          detail: t(lang, 'ffmpeg_missing_detail'),
+          buttons: [t(lang, 'btn_download_site'), t(lang, 'btn_continue_without'), t(lang, 'btn_exit')],
           defaultId: 0,
           cancelId: 1,
         });
@@ -99,4 +113,10 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Never leave orphaned ffmpeg children behind when the app exits.
+app.on('before-quit', () => {
+  log.info('App quitting — terminating active ffmpeg processes');
+  killActiveProcesses();
 });

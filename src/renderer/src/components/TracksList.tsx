@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Track, ExternalSub } from '@shared/types';
 import { Ico, I } from './ui/Icons';
+import { useT } from '../hooks/useTranslation';
 
 export type Filter = 'all' | 'audio' | 'sub';
 
@@ -46,19 +47,21 @@ export function TracksList({
   onSetDefault,
   onSetForced,
 }: Props) {
+  const { t } = useT();
+
   const all: UnifiedTrack[] = [
-    ...tracks.map<UnifiedTrack>((t) => ({
-      id: String(t.id),
-      intId: t.id,
+    ...tracks.map<UnifiedTrack>((tr) => ({
+      id: String(tr.id),
+      intId: tr.id,
       external: false,
-      kind: t.kind,
-      name: t.name,
-      info: t.info,
-      lang: t.lang,
-      def: t.def,
-      forced: t.forced,
-      keep: t.keep,
-      locked: t.locked,
+      kind: tr.kind,
+      name: tr.name,
+      info: tr.info,
+      lang: tr.lang,
+      def: tr.def,
+      forced: tr.forced,
+      keep: tr.keep,
+      locked: tr.locked,
     })),
     ...extSubs.map<UnifiedTrack>((s) => ({
       id: `ext:${s.id}`,
@@ -66,7 +69,7 @@ export function TracksList({
       external: true,
       extId: s.id,
       kind: 'S',
-      name: s.trackName + ' · קובץ חיצוני',
+      name: `${s.trackName} · ${t('ext_file_suffix')}`,
       info: `${s.name} · ${s.size} · ${s.cues.toLocaleString()} cues · ${s.encoding}`,
       lang: s.lang,
       def: s.def,
@@ -90,7 +93,7 @@ export function TracksList({
     <>
       <div className="center-h">
         <div className="left-grp">
-          <div className="title">מסלולים</div>
+          <div className="title">{t('tracks')}</div>
           <div className="counter mono">
             {tracks.filter((x) => x.keep).length}/{tracks.length}
           </div>
@@ -99,20 +102,20 @@ export function TracksList({
           <div className="search">
             <Ico d={I.search} size={13} />
             <input
-              placeholder="חיפוש..."
+              placeholder={t('search_placeholder')}
               value={search}
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
           <div className="seg">
             <button className={filter === 'all' ? 'on' : ''} onClick={() => onFilter('all')}>
-              הכול
+              {t('filter_all')}
             </button>
             <button className={filter === 'audio' ? 'on' : ''} onClick={() => onFilter('audio')}>
-              אודיו
+              {t('filter_audio')}
             </button>
             <button className={filter === 'sub' ? 'on' : ''} onClick={() => onFilter('sub')}>
-              כתוביות
+              {t('filter_subs')}
             </button>
           </div>
         </div>
@@ -122,16 +125,16 @@ export function TracksList({
         <span></span>
         <span></span>
         <span>#</span>
-        <span>שם · מידע</span>
-        <span>שפה</span>
+        <span>{t('th_name_info')}</span>
+        <span>{t('th_lang')}</span>
         <span className="cf">D</span>
         <span className="cf">F</span>
-        <span style={{ textAlign: 'end' }}>השאר</span>
+        <span style={{ textAlign: 'end' }}>{t('th_keep')}</span>
       </div>
 
       <div className="tracks-body">
         {visible.length === 0 ? (
-          <div className="empty">אין מסלולים שמתאימים לסינון</div>
+          <div className="empty">{t('no_tracks')}</div>
         ) : (
           visible.map((tr) => {
             const tone = tr.kind === 'V' ? 'video' : tr.kind === 'A' ? 'audio' : 'sub';

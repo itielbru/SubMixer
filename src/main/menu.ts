@@ -1,12 +1,14 @@
 import { Menu, BrowserWindow, app, shell, MenuItemConstructorOptions } from 'electron';
 import { userDataPath } from './store';
 
-export function buildMenu(win: BrowserWindow): Menu {
+export function buildMenu(win: BrowserWindow, lang: 'he' | 'en' = 'he'): Menu {
   const isMac = process.platform === 'darwin';
 
   const send = (channel: string, ...args: unknown[]) => {
     win.webContents.send(channel, ...args);
   };
+
+  const isHe = lang === 'he';
 
   const template: MenuItemConstructorOptions[] = [
     ...(isMac
@@ -28,32 +30,32 @@ export function buildMenu(win: BrowserWindow): Menu {
         ] as MenuItemConstructorOptions[])
       : []),
     {
-      label: 'קובץ',
+      label: isHe ? 'קובץ' : 'File',
       submenu: [
         {
-          label: 'פתח קובץ וידאו…',
+          label: isHe ? 'פתח קובץ וידאו…' : 'Open Video File…',
           accelerator: 'CmdOrCtrl+O',
           click: () => send('menu:openFile'),
         },
         {
-          label: 'הוסף כתוביות SRT…',
+          label: isHe ? 'הוסף כתוביות…' : 'Add Subtitles…',
           accelerator: 'CmdOrCtrl+Shift+O',
           click: () => send('menu:addSrt'),
         },
         { type: 'separator' },
         {
-          label: 'ייצא קובץ',
+          label: isHe ? 'ייצא קובץ' : 'Export File',
           accelerator: 'CmdOrCtrl+E',
           click: () => send('menu:export'),
         },
         {
-          label: 'בטל ייצוא',
+          label: isHe ? 'בטל ייצוא' : 'Cancel Export',
           accelerator: 'Escape',
           click: () => send('menu:cancelExport'),
         },
         { type: 'separator' },
         {
-          label: 'פתח תיקיית הגדרות',
+          label: isHe ? 'פתח תיקיית הגדרות' : 'Open Settings Directory',
           click: () => shell.openPath(userDataPath()),
         },
         { type: 'separator' },
@@ -61,20 +63,20 @@ export function buildMenu(win: BrowserWindow): Menu {
       ],
     },
     {
-      label: 'תצוגה',
+      label: isHe ? 'תצוגה' : 'View',
       submenu: [
         {
-          label: 'פתח/סגור פאנל כתוביות',
+          label: isHe ? 'פתח/סגור פאנל כתוביות' : 'Toggle Subtitles Panel',
           accelerator: 'CmdOrCtrl+B',
           click: () => send('menu:toggleDrawer'),
         },
         {
-          label: 'היסטוריית ייצוא',
+          label: isHe ? 'היסטוריית ייצוא' : 'Export History',
           accelerator: 'CmdOrCtrl+H',
           click: () => send('menu:history'),
         },
         {
-          label: 'פקודת FFmpeg…',
+          label: isHe ? 'פקודת FFmpeg…' : 'FFmpeg Command…',
           accelerator: 'CmdOrCtrl+K',
           click: () => send('menu:ffmpegCmd'),
         },
@@ -91,19 +93,19 @@ export function buildMenu(win: BrowserWindow): Menu {
       ],
     },
     {
-      label: 'עזרה',
+      label: isHe ? 'עזרה' : 'Help',
       submenu: [
         {
-          label: 'אתר FFmpeg להורדה',
+          label: isHe ? 'אתר FFmpeg להורדה' : 'FFmpeg Download Website',
           click: () => shell.openExternal('https://www.gyan.dev/ffmpeg/builds/'),
         },
         {
-          label: 'בדוק זמינות FFmpeg',
+          label: isHe ? 'בדוק זמינות FFmpeg' : 'Check FFmpeg Availability',
           click: () => send('menu:checkFFmpeg'),
         },
         { type: 'separator' },
         {
-          label: 'אודות SubMixer',
+          label: isHe ? 'אודות SubMixer' : 'About SubMixer',
           click: () => send('menu:about'),
         },
       ],

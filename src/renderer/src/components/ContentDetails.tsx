@@ -2,6 +2,7 @@ import React from 'react';
 import { Section, Field } from './ui/Section';
 import { Dropdown } from './ui/Dropdown';
 import { Ico, I } from './ui/Icons';
+import { useT } from '../hooks/useTranslation';
 
 interface Props {
   contentType: 'movie' | 'series';
@@ -19,6 +20,8 @@ interface Props {
   destFolder: string;
   onDestFolder: (v: string) => void;
   onBrowseFolder: () => void;
+  exportUseContentFolder: boolean;
+  onExportUseContentFolder: (v: boolean) => void;
   overrideName: boolean;
   onOverrideName: (v: boolean) => void;
   customName: string;
@@ -41,36 +44,40 @@ export function ContentDetails({
   destFolder,
   onDestFolder,
   onBrowseFolder,
+  exportUseContentFolder,
+  onExportUseContentFolder,
   overrideName,
   onOverrideName,
   customName,
   onCustomName,
 }: Props) {
+  const { t } = useT();
+
   return (
-    <Section title="פרטי תוכן">
-      <Field label="סוג">
+    <Section title={t('content_details')}>
+      <Field label={t('content_type')}>
         <div className="seg-mode">
           <button
             className={contentType === 'movie' ? 'on' : ''}
             type="button"
             onClick={() => onContentType('movie')}
           >
-            סרט
+            {t('movie')}
           </button>
           <button
             className={contentType === 'series' ? 'on' : ''}
             type="button"
             onClick={() => onContentType('series')}
           >
-            סדרה
+            {t('series')}
           </button>
         </div>
       </Field>
-      <Field label="שם">
+      <Field label={t('name_label')}>
         <input value={title} onChange={(e) => onTitle(e.target.value)} />
       </Field>
       {contentType === 'movie' ? (
-        <Field label="שנה · מיכל">
+        <Field label={t('year_container')}>
           <div className="grp">
             <input
               className="mono"
@@ -82,7 +89,7 @@ export function ContentDetails({
           </div>
         </Field>
       ) : (
-        <Field label="עונה · פרק · מיכל">
+        <Field label={t('season_ep_container')}>
           <div className="grp">
             <input
               className="mono"
@@ -100,27 +107,46 @@ export function ContentDetails({
           </div>
         </Field>
       )}
-      <Field label="תיקיית יעד">
+      <Field label={t('dest_folder')}>
         <div className="grp">
           <input value={destFolder} onChange={(e) => onDestFolder(e.target.value)} />
-          <button className="btn ghost compact" type="button" title="עיון" onClick={onBrowseFolder}>
+          <button className="btn ghost compact" type="button" title={t('browse_title')} onClick={onBrowseFolder}>
             <Ico d={I.folder} size={13} />
           </button>
         </div>
       </Field>
       <label className="cb">
-        <span className={`cb-box ${overrideName ? 'on' : ''}`}>
+        <span
+          className={`cb-box ${exportUseContentFolder ? 'on' : ''}`}
+          onClick={() => onExportUseContentFolder(!exportUseContentFolder)}
+        >
+          {exportUseContentFolder && <Ico d={I.check} size={10} />}
+        </span>
+        <span onClick={() => onExportUseContentFolder(!exportUseContentFolder)}>
+          {t('export_content_folder')}
+        </span>
+      </label>
+      <div className="small" style={{ opacity: 0.75, marginTop: -4, marginBottom: 6 }}>
+        {t('export_content_folder_hint')}
+      </div>
+      <label className="cb">
+        <span
+          className={`cb-box ${overrideName ? 'on' : ''}`}
+          onClick={() => onOverrideName(!overrideName)}
+        >
           {overrideName && <Ico d={I.check} size={10} />}
         </span>
-        <span onClick={() => onOverrideName(!overrideName)}>שם מותאם אישית</span>
+        <span onClick={() => onOverrideName(!overrideName)}>{t('override_name')}</span>
       </label>
       {overrideName && (
-        <input
-          className="mt6"
-          placeholder="שם הקובץ ללא סיומת"
-          value={customName}
-          onChange={(e) => onCustomName(e.target.value)}
-        />
+        <Field label={t('custom_name')}>
+          <input
+            dir="ltr"
+            placeholder={t('custom_name_placeholder')}
+            value={customName}
+            onChange={(e) => onCustomName(e.target.value)}
+          />
+        </Field>
       )}
     </Section>
   );

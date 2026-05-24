@@ -6,9 +6,21 @@ const DEFAULT: AppSettings = {
   theme: 'dark',
   accent: 'indigo',
   font: 'Heebo',
+  lang: 'he',
   defaultDestFolder: '',
+  exportUseContentFolder: false,
   recentFiles: [],
   history: [],
+  minCueDurationSec: 1.2,
+  maxCueDurationSec: 8,
+  maxCps: 25,
+  hardMaxCps: 35,
+  minGapSec: 0.12,
+  subFontScale: 1,
+  subColor: '#ffffff',
+  subStyle: 'outline',
+  subPosition: 'bottom',
+  burnInSubs: false,
 };
 
 export function useSettings(): [

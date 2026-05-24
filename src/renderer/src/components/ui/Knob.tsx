@@ -1,6 +1,8 @@
 import React from 'react';
 import { Ico, I } from './Icons';
 
+import { useT } from '../../hooks/useTranslation';
+
 interface KnobProps {
   label: string;
   value: number;
@@ -14,12 +16,13 @@ interface KnobProps {
 }
 
 export function Knob({ label, value, unit, min, max, step, format, onChange, onReset }: KnobProps) {
+  const { t } = useT();
   const pct = ((value - min) / (max - min)) * 100;
   return (
     <div className="knob">
       <div className="knob-h">
         <span className="knob-l">{label}</span>
-        <button className="knob-reset" onClick={onReset} title="אפס">
+        <button className="knob-reset" onClick={onReset} title={t('reset_btn')}>
           <Ico d={I.reset} size={10} />
         </button>
       </div>

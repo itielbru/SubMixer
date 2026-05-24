@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ico, I } from './ui/Icons';
 import { fmtSizeMB } from '../lib/format';
+import { useT } from '../hooks/useTranslation';
 
 interface LogLine {
   time: string;
@@ -39,15 +40,17 @@ export function BottomBar({
   onCancelExport,
   canExport,
 }: Props) {
+  const { t } = useT();
   const last = logs.slice(-1)[0];
+
   return (
     <footer className="bottom">
       <div className="b-left">
         <button className="btn ghost compact" type="button" onClick={onToggleDrawer}>
-          {drawerOpen ? 'סגור פאנל כתוביות' : 'פתח פאנל כתוביות'}
+          {drawerOpen ? t('close_drawer') : t('open_drawer')}
         </button>
         <button className="btn ghost compact" type="button" onClick={onShowFfmpeg}>
-          <Ico d={I.copy} size={12} /> פקודת FFmpeg
+          <Ico d={I.copy} size={12} /> {t('ffmpeg_cmd')}
         </button>
       </div>
 
@@ -70,7 +73,7 @@ export function BottomBar({
               </div>
             </div>
             <button className="btn danger" type="button" onClick={onCancelExport}>
-              בטל
+              {t('cancel')}
             </button>
           </>
         ) : (
@@ -80,7 +83,7 @@ export function BottomBar({
               <span className="ct mono">{subCount}S</span>
             </div>
             <button className="btn primary" type="button" onClick={onExport} disabled={!canExport}>
-              <Ico d={I.zap} size={13} /> ייצא קובץ
+              <Ico d={I.zap} size={13} /> {t('export_btn')}
             </button>
           </>
         )}

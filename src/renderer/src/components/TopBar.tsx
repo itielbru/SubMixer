@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MediaFile } from '@shared/types';
 import { Ico, I } from './ui/Icons';
+import { useT } from '../hooks/useTranslation';
 
 interface Props {
   file: MediaFile | null;
@@ -29,22 +30,24 @@ export function TopBar({
   onOpenHistory,
   onOpenSettings,
 }: Props) {
+  const { t } = useT();
+
   return (
     <header className="topbar">
       <div className="brand">
         <div className="mark">S</div>
         <div className="brand-txt">
-          <div className="name">SubMixer</div>
+          <div className="name">{t('app_title')}</div>
           <div className="ver">{appVersion} · {ffVersion || 'FFmpeg —'}</div>
         </div>
       </div>
       <button className="btn ghost" onClick={onOpenFile}>
-        <Ico d={I.folder} /> פתח קובץ
+        <Ico d={I.folder} /> {t('open_file')}
       </button>
       <div className="crumbs">
-        <span>{contentType === 'movie' ? 'סרט' : 'סדרה'}</span>
+        <span>{contentType === 'movie' ? t('movie') : t('series')}</span>
         <Ico d={I.arrowL} size={11} />
-        <b>{title || 'ללא כותרת'}</b>
+        <b>{title || t('no_title')}</b>
         {contentType === 'movie' && year && <em>{year}</em>}
         {contentType === 'series' && (
           <em>
@@ -69,10 +72,10 @@ export function TopBar({
           </div>
         </div>
       )}
-      <button className="icon-btn" title="היסטוריה" onClick={onOpenHistory}>
+      <button className="icon-btn" title={t('export_history')} onClick={onOpenHistory}>
         <Ico d={I.history} size={15} />
       </button>
-      <button className="icon-btn" title="הגדרות" onClick={onOpenSettings}>
+      <button className="icon-btn" title={t('settings')} onClick={onOpenSettings}>
         <Ico d={I.cog} size={15} />
       </button>
     </header>
