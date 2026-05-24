@@ -13,6 +13,11 @@ files:
   - package.json
   - "!**/*.map"
   - "!**/*.ts"
+extraResources:
+  - from: ffmpeg-bin
+    to: ffmpeg
+    filter:
+      - "**/*"
 extraMetadata:
   main: out/main/index.js
 win:
@@ -40,4 +45,12 @@ fileAssociations:
   - ext: mp4
     description: MPEG-4 Video
     role: Editor
-publish: null
+# Auto-update feed. electron-builder generates latest.yml on build and uploads
+# artifacts to GitHub Releases when invoked with `--publish always` (see the
+# release workflow). Code signing activates automatically when CSC_LINK /
+# CSC_KEY_PASSWORD are present; once signing is in place, set
+# verifyUpdateCodeSignature: true above for secure update verification.
+publish:
+  provider: github
+  owner: itielbru
+  repo: SubMixer

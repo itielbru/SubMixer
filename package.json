@@ -5,6 +5,14 @@
   "main": "./out/main/index.js",
   "author": "Itiel",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/itielbru/SubMixer.git"
+  },
+  "homepage": "https://github.com/itielbru/SubMixer#readme",
+  "bugs": {
+    "url": "https://github.com/itielbru/SubMixer/issues"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
@@ -13,29 +21,50 @@
     "build:newdir": "electron-vite build && electron-builder --win nsis --config.directories.output=release-new",
     "build:portable": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win portable",
     "build:dir": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win --dir",
+    "release": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win nsis portable --publish always",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "setup:ffmpeg": "node scripts/setup-ffmpeg.cjs",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "chardet": "^2.0.0",
+    "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.3",
     "iconv-lite": "^0.6.3"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@eslint/js": "^9.39.4",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^2.1.9",
     "electron": "^31.2.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "globals": "^15.15.0",
+    "prettier": "^3.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "typescript": "^5.5.3",
-    "vite": "^5.3.4"
+    "typescript-eslint": "^8.59.4",
+    "vite": "^5.3.4",
+    "vitest": "^2.1.9"
   }
 }
