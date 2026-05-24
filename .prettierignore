@@ -1,0 +1,10 @@
+node_modules
+out
+dist
+release
+release-new
+ffmpeg
+ffmpeg-bin
+package-lock.json
+*.tsbuildinfo
+.claude

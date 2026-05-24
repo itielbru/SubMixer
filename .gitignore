@@ -6,3 +6,14 @@ dist
 *.log
 .DS_Store
 .vscode
+ffmpeg/
+.ffmpeg-download.zip
+.ffmpeg-extract/
+ffmpeg-bin/*.exe
+
+# Build artifacts
+*.tsbuildinfo
+
+# Local agent state and backups (never commit)
+.claude/
+src_backup/

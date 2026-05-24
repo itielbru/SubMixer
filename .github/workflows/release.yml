@@ -1,0 +1,49 @@
+name: Release
+
+# Publish a signed (if a cert is configured) Windows build to GitHub Releases
+# whenever a version tag is pushed, e.g. `git tag v1.1.0 && git push --tags`.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # required to create/upload the GitHub Release
+
+jobs:
+  release:
+    name: Build and publish (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch FFmpeg binaries
+        run: npm run setup:ffmpeg
+
+      - name: Quality gates
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Build bundle
+        run: npx electron-vite build
+
+      - name: Package and publish to GitHub Releases
+        run: npx electron-builder --win nsis portable --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing — populate these repo secrets to produce signed builds.
+          # When unset, electron-builder produces unsigned artifacts.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
