@@ -2,6 +2,16 @@
 
 אפליקציית **Electron + React + TypeScript** לניהול מסלולים בקובץ וידאו, כתוביות חיצוניות (SRT/VTT/ASS), תצוגה מקדימה אודיו-only, וייצוא דרך **FFmpeg**.
 
+## הורדה
+
+הגרסה האחרונה זמינה בעמוד ה-[**Releases**](https://github.com/itielbru/SubMixer/releases/latest):
+
+- **`SubMixer-<version>-x64.exe`** — installer (NSIS)
+- **`SubMixer-<version>-portable.exe`** — גרסה ניידת
+
+> הבנייה אינה חתומה דיגיטלית כרגע, לכן Windows SmartScreen עשוי להציג אזהרה —
+> לחצו **More info → Run anyway**.
+
 ## דרישות
 
 - [Node.js](https://nodejs.org/) LTS

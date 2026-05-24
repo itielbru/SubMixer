@@ -17,3 +17,11 @@ ffmpeg-bin/*.exe
 # Local agent state and backups (never commit)
 .claude/
 src_backup/
+
+# Secrets / local env (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.p12
