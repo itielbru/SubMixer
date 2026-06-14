@@ -89,8 +89,6 @@ describe('computeVisualSync', () => {
   });
 
   it('returns null for a degenerate (zero) span', () => {
-    expect(
-      computeVisualSync({ fileStart: 5, fileEnd: 5, mediaStart: 0, mediaEnd: 10 }),
-    ).toBeNull();
+    expect(computeVisualSync({ fileStart: 5, fileEnd: 5, mediaStart: 0, mediaEnd: 10 })).toBeNull();
   });
 });

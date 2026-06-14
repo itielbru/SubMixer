@@ -12,13 +12,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function FindReplaceModal({
-  cues,
-  selectedIdx,
-  onApply,
-  onDuplicate,
-  onClose,
-}: Props) {
+export function FindReplaceModal({ cues, selectedIdx, onApply, onDuplicate, onClose }: Props) {
   const { t } = useT();
   const [find, setFind] = useState('');
   const [replace, setReplace] = useState('');
@@ -69,9 +63,7 @@ export function FindReplaceModal({
           >
             {fromSelected && <Ico d={I.check} size={10} />}
           </span>
-          <span onClick={() => setFromSelected((v) => !v)}>
-            {t('find_replace_from_selected')}
-          </span>
+          <span onClick={() => setFromSelected((v) => !v)}>{t('find_replace_from_selected')}</span>
         </label>
         {find && (
           <div className="small mono mt8">

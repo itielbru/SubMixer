@@ -47,7 +47,9 @@ export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogPro
         </button>
         <div
           className="dlg-drop"
-          style={drag ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : undefined}
+          style={
+            drag ? { borderColor: 'var(--accent)', background: 'var(--accent-soft)' } : undefined
+          }
           onDragOver={(e) => {
             e.preventDefault();
             setDrag(true);

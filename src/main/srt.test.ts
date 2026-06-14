@@ -7,7 +7,9 @@ import { parseSrt, parseVtt, parseAss, serializeSrt, readSrtFile } from './srt';
 
 describe('parseSrt', () => {
   it('parses numbered blocks with comma timestamps', () => {
-    const cues = parseSrt('1\n00:00:01,000 --> 00:00:02,500\nHello\n\n2\n00:00:03,000 --> 00:00:04,000\nWorld');
+    const cues = parseSrt(
+      '1\n00:00:01,000 --> 00:00:02,500\nHello\n\n2\n00:00:03,000 --> 00:00:04,000\nWorld',
+    );
     expect(cues).toHaveLength(2);
     expect(cues[0]).toMatchObject({ idx: 1, start: 1, end: 2.5, text: 'Hello' });
     expect(cues[1].text).toBe('World');

@@ -93,7 +93,11 @@ app.whenReady().then(async () => {
           title: t(lang, 'ffmpeg_missing_title'),
           message: t(lang, 'ffmpeg_missing_msg'),
           detail: t(lang, 'ffmpeg_missing_detail'),
-          buttons: [t(lang, 'btn_download_site'), t(lang, 'btn_continue_without'), t(lang, 'btn_exit')],
+          buttons: [
+            t(lang, 'btn_download_site'),
+            t(lang, 'btn_continue_without'),
+            t(lang, 'btn_exit'),
+          ],
           defaultId: 0,
           cancelId: 1,
         });

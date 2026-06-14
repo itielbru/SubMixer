@@ -19,8 +19,7 @@ export function initLogger(): void {
   if (initialized) return;
   initialized = true;
 
-  log.transports.file.resolvePathFn = () =>
-    path.join(app.getPath('userData'), 'logs', 'main.log');
+  log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'main.log');
   log.transports.file.level = 'info';
   log.transports.file.maxSize = 5 * 1024 * 1024; // 5 MB then rotate
   log.transports.console.level = app.isPackaged ? 'warn' : 'debug';

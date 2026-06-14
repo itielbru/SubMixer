@@ -158,15 +158,13 @@ export const translations = {
     sub_track_name: 'שם מסלול',
     sub_encoding: 'קידוד',
     sub_default: 'ברירת מחדל',
-    sub_default_tip:
-      'נבחר אוטומטית בעת הפעלת הקובץ. ניגון אחד בלבד מסוג זה יכול להיות ברירת מחדל.',
+    sub_default_tip: 'נבחר אוטומטית בעת הפעלת הקובץ. ניגון אחד בלבד מסוג זה יכול להיות ברירת מחדל.',
     sub_forced: 'כפויות',
     sub_forced_tip: 'כתוביות שמוצגות תמיד לרוב לתרגום קטעים בשפה זרה.',
     save_synced_srt: 'שמור כתוביות מסונכרנות',
     visual_sync_btn: 'סנכרון ויזואלי',
     visual_sync_title: 'סנכרון ויזואלי',
-    visual_sync_hint:
-      'התאם שורת התחלה ושורת סיום לזמני הווידאו, ואז החל offset ומהירות.',
+    visual_sync_hint: 'התאם שורת התחלה ושורת סיום לזמני הווידאו, ואז החל offset ומהירות.',
     visual_sync_start: 'נקודת התחלה',
     visual_sync_end: 'נקודת סיום',
     visual_sync_cue: 'שורת כתובית',
@@ -239,7 +237,8 @@ export const translations = {
     sub_pos_top: 'עליון',
     settings_burn_in: 'צריבת כתוביות',
     burn_in_label: 'צרוב את הכתובית הפעילה לתוך הווידאו',
-    burn_in_hint: 'מבטיח שהכתוביות יוצגו בכל נגן (כולל הנגן של Windows), אך דורש קידוד מחדש של הווידאו — איטי יותר ועם אובדן איכות מסוים. צורב את הכתובית החיצונית הפעילה בלבד.',
+    burn_in_hint:
+      'מבטיח שהכתוביות יוצגו בכל נגן (כולל הנגן של Windows), אך דורש קידוד מחדש של הווידאו — איטי יותר ועם אובדן איכות מסוים. צורב את הכתובית החיצונית הפעילה בלבד.',
     fullscreen: 'מסך מלא',
     exit_fullscreen: 'צא ממסך מלא',
 
@@ -248,7 +247,8 @@ export const translations = {
     tl_fit: 'התאם לכל הסרט',
     tl_center: 'מרכז על מיקום הניגון',
     tl_follow_tip: 'עקוב אחר הניגון אוטומטית',
-    tl_help: 'גרור cue להזזה · ידיות לשינוי תזמון · Ctrl+גלגלת לזום · Shift+גרירה לפאן · Delete למחיקה',
+    tl_help:
+      'גרור cue להזזה · ידיות לשינוי תזמון · Ctrl+גלגלת לזום · Shift+גרירה לפאן · Delete למחיקה',
     tl_peaks_loading: 'מכין גלי קול…',
     tl_peaks_hint: 'לחץ Play כדי להכין גלי קול',
 
@@ -408,7 +408,8 @@ export const translations = {
     dest_folder_missing: 'Choose a destination folder before exporting',
     export_content_folder: 'Subfolder named after content',
     export_content_folder_hint: 'Off: file is saved directly in the destination folder',
-    export_mp4_bitmap_subs: 'Bitmap subtitles (PGS) are not supported in MP4 — remove them or use MKV',
+    export_mp4_bitmap_subs:
+      'Bitmap subtitles (PGS) are not supported in MP4 — remove them or use MKV',
     browse: 'Browse…',
     browse_title: 'Browse',
     override_name: 'Custom Filename',
@@ -510,8 +511,7 @@ export const translations = {
     save_synced_srt: 'Save Synced Subtitles',
     visual_sync_btn: 'Visual Sync',
     visual_sync_title: 'Visual Sync',
-    visual_sync_hint:
-      'Match a start cue and end cue to video times, then apply offset and speed.',
+    visual_sync_hint: 'Match a start cue and end cue to video times, then apply offset and speed.',
     visual_sync_start: 'Start point',
     visual_sync_end: 'End point',
     visual_sync_cue: 'Subtitle line',
@@ -584,7 +584,8 @@ export const translations = {
     sub_pos_top: 'Top',
     settings_burn_in: 'Burn-in subtitles',
     burn_in_label: 'Burn the active subtitle into the video',
-    burn_in_hint: 'Guarantees subtitles show in any player (including Windows Media Player), but re-encodes the video — slower and with some quality loss. Burns only the active external subtitle.',
+    burn_in_hint:
+      'Guarantees subtitles show in any player (including Windows Media Player), but re-encodes the video — slower and with some quality loss. Burns only the active external subtitle.',
     fullscreen: 'Fullscreen',
     exit_fullscreen: 'Exit fullscreen',
 
@@ -593,7 +594,8 @@ export const translations = {
     tl_fit: 'Fit entire video',
     tl_center: 'Center on playhead',
     tl_follow_tip: 'Auto-follow playhead',
-    tl_help: 'Drag a cue to move · handles to retime · Ctrl+Wheel zoom · Shift+drag pan · Delete to remove',
+    tl_help:
+      'Drag a cue to move · handles to retime · Ctrl+Wheel zoom · Shift+drag pan · Delete to remove',
     tl_peaks_loading: 'Preparing waveform…',
     tl_peaks_hint: 'Press Play to generate waveform',
 

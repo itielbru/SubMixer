@@ -45,132 +45,130 @@ export function VisualSyncModal({ cues, previewT, onSeek, onApply, onClose }: Pr
         </button>
       </div>
       <div className="modal-b sync-wizard">
-          <p className="sync-hint">{t('visual_sync_hint')}</p>
+        <p className="sync-hint">{t('visual_sync_hint')}</p>
 
-          <div className="sync-block">
-            <div className="sync-block-title">{t('visual_sync_start')}</div>
-            <label className="sync-field">
-              <span>{t('visual_sync_cue')}</span>
-              <select
-                value={startIdx}
-                onChange={(e) => {
-                  const i = Number(e.target.value);
-                  setStartIdx(i);
-                  if (i > endIdx) setEndIdx(i);
-                }}
-              >
-                {cues.map((c, i) => (
-                  <option key={i} value={i}>
-                    #{i + 1} · {fmtTimeMs(c.start)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {startCue && (
-              <div className="sync-cue-preview mono" dir="auto">
-                {startCue.text.slice(0, 80)}
-                {startCue.text.length > 80 ? '…' : ''}
-              </div>
-            )}
-            <div className="sync-actions">
-              <button
-                className="btn ghost compact"
-                type="button"
-                onClick={() => startCue && onSeek(startCue.start)}
-              >
-                {t('visual_sync_goto_cue')}
-              </button>
-              <button
-                className="btn primary compact"
-                type="button"
-                onClick={() => setMediaStart(previewT)}
-              >
-                {t('visual_sync_capture')}
-                {mediaStart !== null && (
-                  <span className="mono"> ({fmtTimeMs(mediaStart)})</span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="sync-block">
-            <div className="sync-block-title">{t('visual_sync_end')}</div>
-            <label className="sync-field">
-              <span>{t('visual_sync_cue')}</span>
-              <select
-                value={endIdx}
-                onChange={(e) => {
-                  const i = Number(e.target.value);
-                  setEndIdx(i);
-                  if (i < startIdx) setStartIdx(i);
-                }}
-              >
-                {cues.map((c, i) => (
-                  <option key={i} value={i}>
-                    #{i + 1} · {fmtTimeMs(c.end)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {endCue && (
-              <div className="sync-cue-preview mono" dir="auto">
-                {endCue.text.slice(0, 80)}
-                {endCue.text.length > 80 ? '…' : ''}
-              </div>
-            )}
-            <div className="sync-actions">
-              <button
-                className="btn ghost compact"
-                type="button"
-                onClick={() => endCue && onSeek(endCue.end)}
-              >
-                {t('visual_sync_goto_cue')}
-              </button>
-              <button
-                className="btn primary compact"
-                type="button"
-                onClick={() => setMediaEnd(previewT)}
-              >
-                {t('visual_sync_capture')}
-                {mediaEnd !== null && <span className="mono"> ({fmtTimeMs(mediaEnd)})</span>}
-              </button>
-            </div>
-          </div>
-
-          {result && (
-            <div className="sync-preview mono">
-              <div>
-                {t('knob_offset')}: {result.offset >= 0 ? '+' : ''}
-                {result.offset.toFixed(4)}s
-              </div>
-              <div>
-                {t('knob_speed')}: {result.speed.toFixed(6)}x
-              </div>
-            </div>
-          )}
-
-          {mediaStart !== null && mediaEnd !== null && !result && (
-            <div className="sync-err">{t('visual_sync_invalid')}</div>
-          )}
-
-          <div className="modal-actions">
-            <button className="btn ghost" type="button" onClick={onClose}>
-              {t('cancel')}
-            </button>
-            <button
-              className="btn primary"
-              type="button"
-              disabled={!canApply || !result}
-              onClick={() => {
-                if (result) {
-                  onApply(result.offset, result.speed);
-                  onClose();
-                }
+        <div className="sync-block">
+          <div className="sync-block-title">{t('visual_sync_start')}</div>
+          <label className="sync-field">
+            <span>{t('visual_sync_cue')}</span>
+            <select
+              value={startIdx}
+              onChange={(e) => {
+                const i = Number(e.target.value);
+                setStartIdx(i);
+                if (i > endIdx) setEndIdx(i);
               }}
             >
-              {t('visual_sync_apply')}
+              {cues.map((c, i) => (
+                <option key={i} value={i}>
+                  #{i + 1} · {fmtTimeMs(c.start)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {startCue && (
+            <div className="sync-cue-preview mono" dir="auto">
+              {startCue.text.slice(0, 80)}
+              {startCue.text.length > 80 ? '…' : ''}
+            </div>
+          )}
+          <div className="sync-actions">
+            <button
+              className="btn ghost compact"
+              type="button"
+              onClick={() => startCue && onSeek(startCue.start)}
+            >
+              {t('visual_sync_goto_cue')}
+            </button>
+            <button
+              className="btn primary compact"
+              type="button"
+              onClick={() => setMediaStart(previewT)}
+            >
+              {t('visual_sync_capture')}
+              {mediaStart !== null && <span className="mono"> ({fmtTimeMs(mediaStart)})</span>}
             </button>
           </div>
+        </div>
+
+        <div className="sync-block">
+          <div className="sync-block-title">{t('visual_sync_end')}</div>
+          <label className="sync-field">
+            <span>{t('visual_sync_cue')}</span>
+            <select
+              value={endIdx}
+              onChange={(e) => {
+                const i = Number(e.target.value);
+                setEndIdx(i);
+                if (i < startIdx) setStartIdx(i);
+              }}
+            >
+              {cues.map((c, i) => (
+                <option key={i} value={i}>
+                  #{i + 1} · {fmtTimeMs(c.end)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {endCue && (
+            <div className="sync-cue-preview mono" dir="auto">
+              {endCue.text.slice(0, 80)}
+              {endCue.text.length > 80 ? '…' : ''}
+            </div>
+          )}
+          <div className="sync-actions">
+            <button
+              className="btn ghost compact"
+              type="button"
+              onClick={() => endCue && onSeek(endCue.end)}
+            >
+              {t('visual_sync_goto_cue')}
+            </button>
+            <button
+              className="btn primary compact"
+              type="button"
+              onClick={() => setMediaEnd(previewT)}
+            >
+              {t('visual_sync_capture')}
+              {mediaEnd !== null && <span className="mono"> ({fmtTimeMs(mediaEnd)})</span>}
+            </button>
+          </div>
+        </div>
+
+        {result && (
+          <div className="sync-preview mono">
+            <div>
+              {t('knob_offset')}: {result.offset >= 0 ? '+' : ''}
+              {result.offset.toFixed(4)}s
+            </div>
+            <div>
+              {t('knob_speed')}: {result.speed.toFixed(6)}x
+            </div>
+          </div>
+        )}
+
+        {mediaStart !== null && mediaEnd !== null && !result && (
+          <div className="sync-err">{t('visual_sync_invalid')}</div>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn ghost" type="button" onClick={onClose}>
+            {t('cancel')}
+          </button>
+          <button
+            className="btn primary"
+            type="button"
+            disabled={!canApply || !result}
+            onClick={() => {
+              if (result) {
+                onApply(result.offset, result.speed);
+                onClose();
+              }
+            }}
+          >
+            {t('visual_sync_apply')}
+          </button>
+        </div>
       </div>
     </Modal>
   );

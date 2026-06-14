@@ -10,18 +10,11 @@ interface Props {
   onClose: () => void;
 }
 
-export function AdjustAllTimesModal({
-  cueCount,
-  selectedCueIdx,
-  onApply,
-  onClose,
-}: Props) {
+export function AdjustAllTimesModal({ cueCount, selectedCueIdx, onApply, onClose }: Props) {
   const { t } = useT();
   const [ms, setMs] = useState(0);
   const [partial, setPartial] = useState(false);
-  const [fromIdx, setFromIdx] = useState(() =>
-    selectedCueIdx >= 0 ? selectedCueIdx : 0
-  );
+  const [fromIdx, setFromIdx] = useState(() => (selectedCueIdx >= 0 ? selectedCueIdx : 0));
 
   const apply = (): void => {
     const deltaSec = ms / 1000;
@@ -67,10 +60,7 @@ export function AdjustAllTimesModal({
         </div>
 
         <label className="cb mt12">
-          <span
-            className={`cb-box ${partial ? 'on' : ''}`}
-            onClick={() => setPartial((p) => !p)}
-          >
+          <span className={`cb-box ${partial ? 'on' : ''}`} onClick={() => setPartial((p) => !p)}>
             {partial && <Ico d={I.check} size={10} />}
           </span>
           <span onClick={() => setPartial((p) => !p)}>{t('adjust_all_times_partial')}</span>
@@ -79,10 +69,7 @@ export function AdjustAllTimesModal({
         {partial && (
           <label className="field">
             <span>{t('adjust_all_times_from_cue')}</span>
-            <select
-              value={fromIdx}
-              onChange={(e) => setFromIdx(Number(e.target.value))}
-            >
+            <select value={fromIdx} onChange={(e) => setFromIdx(Number(e.target.value))}>
               {Array.from({ length: cueCount }, (_, i) => (
                 <option key={i} value={i}>
                   #{i + 1}

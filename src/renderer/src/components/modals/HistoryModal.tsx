@@ -55,7 +55,10 @@ export function HistoryModal({ history, onClose, onClear, onShow, onReExport }: 
                 <button
                   className="btn ghost compact"
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onReExport(h.plan!, h.durationSec ?? 0); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReExport(h.plan!, h.durationSec ?? 0);
+                  }}
                 >
                   {t('hist_reexport')}
                 </button>

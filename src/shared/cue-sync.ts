@@ -18,7 +18,7 @@ export function transformCues(cues: SrtCue[], opts: CueSyncOpts): SrtCue[] {
 
 export function transformedCueTimes(
   cue: SrtCue,
-  opts: CueSyncOpts
+  opts: CueSyncOpts,
 ): { start: number; end: number } {
   const { offset, speed } = opts;
   return {
@@ -31,7 +31,7 @@ export function transformedCueTimes(
 export function findCueAtMediaTime(
   cues: SrtCue[],
   mediaT: number,
-  opts: CueSyncOpts
+  opts: CueSyncOpts,
 ): SrtCue | undefined {
   const { offset, speed } = opts;
   if (offset === 0 && speed === 1) {
@@ -42,11 +42,7 @@ export function findCueAtMediaTime(
   return cues.find((c) => fileT >= c.start && fileT <= c.end);
 }
 
-export function findCueIndexAtMediaTime(
-  cues: SrtCue[],
-  mediaT: number,
-  opts: CueSyncOpts
-): number {
+export function findCueIndexAtMediaTime(cues: SrtCue[], mediaT: number, opts: CueSyncOpts): number {
   const cue = findCueAtMediaTime(cues, mediaT, opts);
   return cue ? cues.indexOf(cue) : -1;
 }
@@ -73,7 +69,7 @@ export interface VisualSyncPoints {
 
 /** Derive offset/speed so fileStart→mediaStart and fileEnd→mediaEnd after transform. */
 export function computeVisualSync(
-  points: VisualSyncPoints
+  points: VisualSyncPoints,
 ): { offset: number; speed: number } | null {
   const { fileStart, fileEnd, mediaStart, mediaEnd } = points;
   const fileSpan = fileEnd - fileStart;

@@ -68,8 +68,11 @@ function CueListViewImpl({
   const scrollRafRef = useRef(0);
 
   const warnings = useMemo<CueWarnings[]>(
-    () => cues.map((c, i) => computeWarnings(c, cues[i - 1], cues[i + 1], warnThresholds, videoDurationSec)),
-    [cues, warnThresholds, videoDurationSec]
+    () =>
+      cues.map((c, i) =>
+        computeWarnings(c, cues[i - 1], cues[i + 1], warnThresholds, videoDurationSec),
+      ),
+    [cues, warnThresholds, videoDurationSec],
   );
 
   const timingIssueCount = useMemo(() => countTimingIssues(warnings), [warnings]);
@@ -90,9 +93,12 @@ function CueListViewImpl({
   }, [cues.length]);
 
   // Cancel a pending scroll rAF on unmount.
-  useEffect(() => () => {
-    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    },
+    [],
+  );
 
   // Keep the selected row in view — computed from the index so it works even
   // when the row is not currently mounted (virtualized off-screen).
@@ -198,7 +204,9 @@ function CueListViewImpl({
       <div className="cl-toolbar">
         <span className="cl-title">{t('cue_list_title')}</span>
         {selectedIndices.length > 1 && (
-          <span className="cl-counter mono">{t('n_selected').replace('{n}', String(selectedIndices.length))}</span>
+          <span className="cl-counter mono">
+            {t('n_selected').replace('{n}', String(selectedIndices.length))}
+          </span>
         )}
         <div className="cl-tools">
           {timingIssueCount > 0 && onOpenFixErrors && (
@@ -374,16 +382,34 @@ function CueListViewImpl({
         >
           {onSplitCue && (
             <>
-              <button type="button" onClick={() => { onSplitCue(ctx.idx, 'playhead'); setCtx(null); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSplitCue(ctx.idx, 'playhead');
+                  setCtx(null);
+                }}
+              >
                 {t('ctx_split_playhead')}
               </button>
-              <button type="button" onClick={() => { onSplitCue(ctx.idx, 'newline'); setCtx(null); }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSplitCue(ctx.idx, 'newline');
+                  setCtx(null);
+                }}
+              >
                 {t('ctx_split_newline')}
               </button>
             </>
           )}
           {onMergeCue && ctx.idx < cues.length - 1 && (
-            <button type="button" onClick={() => { onMergeCue(ctx.idx); setCtx(null); }}>
+            <button
+              type="button"
+              onClick={() => {
+                onMergeCue(ctx.idx);
+                setCtx(null);
+              }}
+            >
               {t('ctx_merge_next')}
             </button>
           )}

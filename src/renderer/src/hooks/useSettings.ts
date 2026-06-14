@@ -58,6 +58,8 @@ export function useSettings(): [
     } else {
       applyTheme(settings);
     }
+    // Re-apply theme only when the visual settings change, not on every settings write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.theme, settings.accent, settings.font]);
 
   useEffect(() => {

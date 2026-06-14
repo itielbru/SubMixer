@@ -23,7 +23,14 @@ interface Props {
   onClose: () => void;
 }
 
-export function BatchQueueModal({ items, exporting, onRemove, onRunAll, onClearDone, onClose }: Props) {
+export function BatchQueueModal({
+  items,
+  exporting,
+  onRemove,
+  onRunAll,
+  onClearDone,
+  onClose,
+}: Props) {
   const { t } = useT();
   const hasPending = items.some((x) => x.status === 'pending');
   const hasDone = items.some((x) => x.status === 'done' || x.status === 'failed');

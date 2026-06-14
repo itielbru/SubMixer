@@ -13,15 +13,13 @@ import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from 
 
 const api = {
   ffmpeg: {
-    status: (force = false): Promise<FFmpegStatus> =>
-      ipcRenderer.invoke('ffmpeg:status', force),
+    status: (force = false): Promise<FFmpegStatus> => ipcRenderer.invoke('ffmpeg:status', force),
     openInstallPage: (): Promise<void> => ipcRenderer.invoke('ffmpeg:openInstallPage'),
   },
 
   media: {
     probe: (filePath: string): Promise<ProbeResult> => ipcRenderer.invoke('media:probe', filePath),
-    url: (filePath: string): string =>
-      `submixer://media?path=${encodeURIComponent(filePath)}`,
+    url: (filePath: string): string => `submixer://media?path=${encodeURIComponent(filePath)}`,
   },
 
   dialog: {
@@ -35,19 +33,25 @@ const api = {
 
   srt: {
     add: (filePath: string): Promise<AddSubResult> => ipcRenderer.invoke('srt:add', filePath),
-    read: (filePath: string): Promise<{ ok: boolean; cues?: SrtCue[]; encoding?: string; size?: number; error?: string }> =>
-      ipcRenderer.invoke('srt:read', filePath),
+    read: (
+      filePath: string,
+    ): Promise<{
+      ok: boolean;
+      cues?: SrtCue[];
+      encoding?: string;
+      size?: number;
+      error?: string;
+    }> => ipcRenderer.invoke('srt:read', filePath),
     save: (args: {
       sourcePath: string;
       destPath: string;
       offset: number;
       speed: number;
       encoding?: string;
-    }): Promise<{ ok: boolean; error?: string }> =>
-      ipcRenderer.invoke('srt:save', args),
+    }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('srt:save', args),
     writeCues: (
       cues: SrtCue[],
-      baseName: string
+      baseName: string,
     ): Promise<{ ok: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke('srt:writeCues', cues, baseName),
   },
@@ -57,7 +61,7 @@ const api = {
       filePath: string,
       trackIndex: number,
       durationSec: number,
-      phase: PreviewExtractPhase = 'full'
+      phase: PreviewExtractPhase = 'full',
     ): Promise<PreviewExtractResult> =>
       ipcRenderer.invoke('preview:extract', { filePath, trackIndex, durationSec, phase }),
     onProgress: (cb: (p: PreviewProgress) => void): (() => void) => {
@@ -71,7 +75,7 @@ const api = {
     get: (
       filePath: string,
       trackIndex: number,
-      durationSec: number
+      durationSec: number,
     ): Promise<{
       ok: boolean;
       fromCache?: boolean;
@@ -92,12 +96,11 @@ const api = {
     run: (
       plan: ExportPlan,
       durationSec: number,
-      externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
+      externalSubs: { path: string; offset: number; speed: number; encoding?: string }[],
     ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> =>
       ipcRenderer.invoke('export:run', plan, durationSec, externalSubs),
     cancel: (): Promise<boolean> => ipcRenderer.invoke('export:cancel'),
-    cmdString: (plan: ExportPlan): Promise<string> =>
-      ipcRenderer.invoke('export:cmdString', plan),
+    cmdString: (plan: ExportPlan): Promise<string> => ipcRenderer.invoke('export:cmdString', plan),
     onProgress: (cb: (p: ExportProgress) => void): (() => void) => {
       const handler = (_e: IpcRendererEvent, p: ExportProgress) => cb(p);
       ipcRenderer.on('export:progress', handler);

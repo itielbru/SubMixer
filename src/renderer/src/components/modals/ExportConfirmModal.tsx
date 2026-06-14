@@ -12,7 +12,7 @@ interface Props {
 export function ExportConfirmModal({ kind = 'double-apply', onConfirm, onClose }: Props) {
   const { t } = useT();
   const title = kind === 'overwrite' ? t('export_overwrite_title') : t('export_double_apply_title');
-  const body  = kind === 'overwrite' ? t('export_overwrite_body')  : t('export_double_apply_body');
+  const body = kind === 'overwrite' ? t('export_overwrite_body') : t('export_double_apply_body');
   return (
     <Modal onClose={onClose} label={title}>
       <div className="modal-h">

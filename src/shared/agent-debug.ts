@@ -21,7 +21,7 @@ export function agentDebug(
   message: string,
   data: Record<string, unknown>,
   hypothesisId: string,
-  runId?: string
+  runId?: string,
 ): void {
   if (typeof window === 'undefined') return;
   const w = window as Window & {

@@ -18,7 +18,7 @@ function formatChange(
   kind: 'overlap' | 'gap',
   lineA: number,
   lineB: number,
-  time: number
+  time: number,
 ): string {
   const key: I18nKey = kind === 'overlap' ? 'fix_preview_overlap' : 'fix_preview_gap';
   return t(key)
@@ -39,15 +39,12 @@ export function FixCommonErrorsModal({ cues, minGapSec, onApply, onClose }: Prop
         fixGaps,
         minGapSec,
       }),
-    [cues, minGapSec, fixOverlaps, fixGaps]
+    [cues, minGapSec, fixOverlaps, fixGaps],
   );
 
   const readableChanges = useMemo(
-    () =>
-      preview.changes.map((c) =>
-        formatChange(t, c.kind, c.lineA, c.lineB, c.newStartSec)
-      ),
-    [preview.changes, t]
+    () => preview.changes.map((c) => formatChange(t, c.kind, c.lineA, c.lineB, c.newStartSec)),
+    [preview.changes, t],
   );
 
   return (
@@ -70,10 +67,7 @@ export function FixCommonErrorsModal({ cues, minGapSec, onApply, onClose }: Prop
           <span onClick={() => setFixOverlaps((v) => !v)}>{t('fix_errors_overlaps')}</span>
         </label>
         <label className="cb">
-          <span
-            className={`cb-box ${fixGaps ? 'on' : ''}`}
-            onClick={() => setFixGaps((v) => !v)}
-          >
+          <span className={`cb-box ${fixGaps ? 'on' : ''}`} onClick={() => setFixGaps((v) => !v)}>
             {fixGaps && <Ico d={I.check} size={10} />}
           </span>
           <span onClick={() => setFixGaps((v) => !v)}>{t('fix_errors_gaps')}</span>

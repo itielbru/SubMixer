@@ -110,7 +110,12 @@ export function ContentDetails({
       <Field label={t('dest_folder')}>
         <div className="grp">
           <input value={destFolder} onChange={(e) => onDestFolder(e.target.value)} />
-          <button className="btn ghost compact" type="button" title={t('browse_title')} onClick={onBrowseFolder}>
+          <button
+            className="btn ghost compact"
+            type="button"
+            title={t('browse_title')}
+            onClick={onBrowseFolder}
+          >
             <Ico d={I.folder} size={13} />
           </button>
         </div>

@@ -55,7 +55,10 @@ async function findOnPath(binary: string): Promise<string | null> {
   const cmd = process.platform === 'win32' ? 'where' : 'which';
   try {
     const { stdout } = await execFileAsync(cmd, [binary], { windowsHide: true });
-    const first = stdout.split(/\r?\n/).map((s) => s.trim()).filter(Boolean)[0];
+    const first = stdout
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)[0];
     return first || null;
   } catch {
     return null;
@@ -101,7 +104,7 @@ function ensure(status: FFmpegStatus): asserts status is FFmpegStatus & {
   if (!status.available || !status.ffmpegPath || !status.ffprobePath) {
     throw new Error(
       'FFmpeg / FFprobe לא נמצאו במשתנה הסביבה PATH.\n' +
-        'התקן מ: https://www.gyan.dev/ffmpeg/builds/'
+        'התקן מ: https://www.gyan.dev/ffmpeg/builds/',
     );
   }
 }
@@ -177,11 +180,12 @@ function inferTitle(filename: string): { title: string; year: string } {
   const base = filename.replace(/\.[^.]+$/, '');
   const yearMatch = base.match(/(19|20)\d{2}/);
   const year = yearMatch ? yearMatch[0] : '';
-  const title = base
-    .split(/[._]/)
-    .slice(0, yearMatch ? base.split(/[._]/).findIndex((p) => p === yearMatch[0]) : undefined)
-    .join(' ')
-    .trim() || base;
+  const title =
+    base
+      .split(/[._]/)
+      .slice(0, yearMatch ? base.split(/[._]/).findIndex((p) => p === yearMatch[0]) : undefined)
+      .join(' ')
+      .trim() || base;
   return { title, year };
 }
 
@@ -270,13 +274,7 @@ function streamToTrack(stream: FFProbeStream, isFirstVideo: boolean): Track | nu
 export async function probe(filePath: string): Promise<MediaFile> {
   const status = await findBinaries();
   ensure(status);
-  const args = [
-    '-v', 'quiet',
-    '-print_format', 'json',
-    '-show_format',
-    '-show_streams',
-    filePath,
-  ];
+  const args = ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', filePath];
   let stdout: string;
   try {
     ({ stdout } = await execFileAsync(status.ffprobePath, args, {
@@ -347,7 +345,7 @@ export async function extractAudioPreview(
   jobId: string,
   onProgress?: (p: ExportProgress) => void,
   totalDur = 0,
-  limitSec?: number
+  limitSec?: number,
 ): Promise<string> {
   const status = await findBinaries();
   ensure(status);
@@ -360,24 +358,27 @@ export async function extractAudioPreview(
 
   // Cancel any in-flight extraction first
   if (activePreview && !activePreview.killed) {
-    try { activePreview.kill('SIGINT'); } catch { /* */ }
+    try {
+      activePreview.kill('SIGINT');
+    } catch {
+      /* */
+    }
     activePreview = null;
   }
 
   const capDur =
-    limitSec && limitSec > 0
-      ? totalDur > 0
-        ? Math.min(limitSec, totalDur)
-        : limitSec
-      : totalDur;
+    limitSec && limitSec > 0 ? (totalDur > 0 ? Math.min(limitSec, totalDur) : limitSec) : totalDur;
 
   const args = [
     '-y',
     '-hide_banner',
-    '-loglevel', 'info',
+    '-loglevel',
+    'info',
     '-stats',
-    '-i', filePath,
-    '-map', `0:${trackIndex}`,
+    '-i',
+    filePath,
+    '-map',
+    `0:${trackIndex}`,
     '-vn',
   ];
   if (limitSec && limitSec > 0) {
@@ -390,7 +391,11 @@ export async function extractAudioPreview(
     activePreview = child;
 
     const timer = setTimeout(() => {
-      try { child.kill('SIGINT'); } catch { /* */ }
+      try {
+        child.kill('SIGINT');
+      } catch {
+        /* */
+      }
       rejectP(new Error('FFmpeg preview timed out after 3 minutes'));
     }, PREVIEW_TIMEOUT_MS);
 
@@ -409,7 +414,10 @@ export async function extractAudioPreview(
       }
     });
 
-    child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      rejectP(err);
+    });
     child.on('close', (code) => {
       clearTimeout(timer);
       activePreview = null;
@@ -433,7 +441,7 @@ export async function extractPeaks(
   trackIndex: number,
   durationSec: number,
   onProgress?: (pct: number) => void,
-  peaksPerSec = 100
+  peaksPerSec = 100,
 ): Promise<PeaksData> {
   const status = await findBinaries();
   ensure(status);
@@ -451,13 +459,19 @@ export async function extractPeaks(
 
   const args = [
     '-hide_banner',
-    '-loglevel', 'error',
-    '-i', filePath,
-    '-map', `0:${trackIndex}`,
+    '-loglevel',
+    'error',
+    '-i',
+    filePath,
+    '-map',
+    `0:${trackIndex}`,
     '-vn',
-    '-ac', '1',
-    '-ar', String(srcRate),
-    '-f', 's16le',
+    '-ac',
+    '1',
+    '-ar',
+    String(srcRate),
+    '-f',
+    's16le',
     'pipe:1',
   ];
 
@@ -469,7 +483,11 @@ export async function extractPeaks(
     });
 
     const timer = setTimeout(() => {
-      try { child.kill('SIGINT'); } catch { /* */ }
+      try {
+        child.kill('SIGINT');
+      } catch {
+        /* */
+      }
       rejectP(new Error('FFmpeg peaks extraction timed out after 2 minutes'));
     }, PEAKS_TIMEOUT_MS);
 
@@ -507,21 +525,21 @@ export async function extractPeaks(
       }
 
       const consumed = sampleCount * sampleBytes;
-      carry =
-        buf.length > consumed ? Buffer.from(buf.subarray(consumed)) : Buffer.alloc(0);
+      carry = buf.length > consumed ? Buffer.from(buf.subarray(consumed)) : Buffer.alloc(0);
 
       if (onProgress && durationSec > 0) {
         onProgress(Math.min(99, (peakCount / peaksPerSec / durationSec) * 100));
       }
     });
 
-    child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      rejectP(err);
+    });
     child.on('close', (code) => {
       clearTimeout(timer);
       if (code !== 0) {
-        return rejectP(
-          new Error(`ffmpeg peaks failed (${code}): ${stderr.trim().slice(0, 400)}`)
-        );
+        return rejectP(new Error(`ffmpeg peaks failed (${code}): ${stderr.trim().slice(0, 400)}`));
       }
       if (binFilled > 0) {
         ensureCapacity(peakCount + 1);
@@ -549,15 +567,7 @@ export interface ActiveExport {
 
 let activeExport: ActiveExport | null = null;
 
-const MP4_AUDIO_COPY = new Set([
-  'aac',
-  'mp3',
-  'mp2',
-  'ac3',
-  'eac3',
-  'alac',
-  'opus',
-]);
+const MP4_AUDIO_COPY = new Set(['aac', 'mp3', 'mp2', 'ac3', 'eac3', 'alac', 'opus']);
 
 function mp4AudioCopySafe(codecName?: string): boolean {
   const c = (codecName || '').toLowerCase();
@@ -613,7 +623,7 @@ export function parseFfmpegError(stderr: string): string {
     .map((l) => l.trim())
     .filter(Boolean);
   const errLines = lines.filter((l) =>
-    /error|invalid|failed|not supported|does not match|could not|unable to/i.test(l)
+    /error|invalid|failed|not supported|does not match|could not|unable to/i.test(l),
   );
   if (errLines.length > 0) {
     const joined = errLines.slice(-2).join(' · ');
@@ -748,7 +758,7 @@ export async function runExport(
   processedSubPaths: string[],
   totalDurationSec: number,
   onProgress: (p: ExportProgress) => void,
-  onLog: (line: string) => void
+  onLog: (line: string) => void,
 ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> {
   const status = await findBinaries();
   ensure(status);
@@ -779,7 +789,11 @@ export async function runExport(
       child,
       cancel: () => {
         cancelled = true;
-        try { child.kill('SIGINT'); } catch { /* */ }
+        try {
+          child.kill('SIGINT');
+        } catch {
+          /* */
+        }
       },
     };
 
@@ -865,8 +879,6 @@ export function buildCommandString(plan: ExportPlan, processedSubPaths: string[]
   const status = cachedStatus;
   const ff = status?.ffmpegPath ? path.basename(status.ffmpegPath) : 'ffmpeg';
   const args = buildExportArgs(plan, processedSubPaths);
-  const quoted = args
-    .map((a) => (/[\s"']/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
-    .join(' ');
+  const quoted = args.map((a) => (/[\s"']/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)).join(' ');
   return `${ff} ${quoted}`;
 }

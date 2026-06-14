@@ -53,7 +53,7 @@ async function save(s: AppSettings): Promise<void> {
 
 export async function setSetting<K extends keyof AppSettings>(
   key: K,
-  value: AppSettings[K]
+  value: AppSettings[K],
 ): Promise<AppSettings> {
   const s = await getSettings();
   const next = { ...s, [key]: value };

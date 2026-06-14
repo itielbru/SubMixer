@@ -67,11 +67,17 @@ function AppContent({
     (line: string) => {
       pushLog(line, 'info');
     },
-    [pushLog]
+    [pushLog],
   );
 
-  const { exporting, progress, eta: exportEta, start: runExportJob, cancel: cancelExportJob, runBatch } =
-    useExport(onExportLog);
+  const {
+    exporting,
+    progress,
+    eta: exportEta,
+    start: runExportJob,
+    cancel: cancelExportJob,
+    runBatch,
+  } = useExport(onExportLog);
 
   const [isWin, setIsWin] = useState(true);
   const [appVer, setAppVer] = useState('');
@@ -84,7 +90,7 @@ function AppContent({
   const [activeSubId, setActiveSubId] = useState<string | null>(null);
   const [cuesBySubId, setCuesBySubId] = useState<Record<string, SrtCue[]>>({});
   const [editedSubIds, setEditedSubIds] = useState<Set<string>>(() => new Set());
-  const cues: SrtCue[] = activeSubId ? cuesBySubId[activeSubId] ?? [] : [];
+  const cues: SrtCue[] = activeSubId ? (cuesBySubId[activeSubId] ?? []) : [];
 
   const [contentType, setContentType] = useState<'movie' | 'series'>('movie');
   const [title, setTitle] = useState('');
@@ -115,7 +121,7 @@ function AppContent({
 
   const onPreviewError = useCallback(
     (msg?: string) => toast(msg || t('preview_error'), 'err'),
-    [toast, t]
+    [toast, t],
   );
 
   const {
@@ -144,9 +150,9 @@ function AppContent({
   const [showAdjustAll, setShowAdjustAll] = useState(false);
   const [showFixErrors, setShowFixErrors] = useState(false);
   const [showFindReplace, setShowFindReplace] = useState(false);
-  const [exportConfirm, setExportConfirm] = useState<'mux' | 'overwrite' | { kind: 'srt'; sub: ExternalSub } | null>(
-    null
-  );
+  const [exportConfirm, setExportConfirm] = useState<
+    'mux' | 'overwrite' | { kind: 'srt'; sub: ExternalSub } | null
+  >(null);
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
@@ -315,6 +321,9 @@ function AppContent({
     return () => {
       cancelled = true;
     };
+    // Intentionally keyed on the identifying fields only; re-running on every
+    // `file` object identity change would redundantly re-extract peaks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file?.path, file?.durationSec, previewAudioId]);
 
   const updateCue = useCallback(
@@ -335,7 +344,7 @@ function AppContent({
         return n;
       });
     },
-    [activeSubId, snapshotCues]
+    [activeSubId, snapshotCues],
   );
 
   const deleteCue = useCallback(
@@ -356,10 +365,10 @@ function AppContent({
         return n;
       });
       setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: Math.max(0, s.cues - 1) } : s))
+        subs.map((s) => (s.id === activeSubId ? { ...s, cues: Math.max(0, s.cues - 1) } : s)),
       );
     },
-    [activeSubId, snapshotCues]
+    [activeSubId, snapshotCues],
   );
 
   const insertCue = useCallback(
@@ -382,11 +391,11 @@ function AppContent({
         return n;
       });
       setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: s.cues + 1 } : s))
+        subs.map((s) => (s.id === activeSubId ? { ...s, cues: s.cues + 1 } : s)),
       );
       return pos;
     },
-    [activeSubId, cuesBySubId, snapshotCues]
+    [activeSubId, cuesBySubId, snapshotCues],
   );
 
   const markSubEdited = useCallback(() => {
@@ -420,7 +429,7 @@ function AppContent({
       });
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues]
+    [activeSubId, markSubEdited, snapshotCues],
   );
 
   const shiftAllCues = useCallback(
@@ -442,7 +451,7 @@ function AppContent({
       });
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues]
+    [activeSubId, markSubEdited, snapshotCues],
   );
 
   const setCuesForActiveSub = useCallback(
@@ -451,11 +460,11 @@ function AppContent({
       snapshotCues(activeSubId, null);
       setCuesBySubId((m) => ({ ...m, [activeSubId]: next }));
       setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: next.length } : s))
+        subs.map((s) => (s.id === activeSubId ? { ...s, cues: next.length } : s)),
       );
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues]
+    [activeSubId, markSubEdited, snapshotCues],
   );
 
   const splitCue = useCallback(
@@ -497,7 +506,7 @@ function AppContent({
       });
       setCuesForActiveSub(next);
     },
-    [activeSubId, cuesBySubId, extSubs, previewT, setCuesForActiveSub]
+    [activeSubId, cuesBySubId, extSubs, previewT, setCuesForActiveSub],
   );
 
   const mergeCue = useCallback(
@@ -513,7 +522,7 @@ function AppContent({
       next.splice(idx + 1, 1);
       setCuesForActiveSub(next);
     },
-    [activeSubId, cuesBySubId, setCuesForActiveSub]
+    [activeSubId, cuesBySubId, setCuesForActiveSub],
   );
 
   const duplicateCue = useCallback(
@@ -535,7 +544,7 @@ function AppContent({
       next.splice(idx + 1, 0, copy);
       setCuesForActiveSub(next);
     },
-    [activeSubId, cuesBySubId, setCuesForActiveSub]
+    [activeSubId, cuesBySubId, setCuesForActiveSub],
   );
 
   const warnThresholds: CueWarningThresholds = useMemo(
@@ -552,7 +561,7 @@ function AppContent({
       settings.maxCps,
       settings.hardMaxCps,
       settings.minGapSec,
-    ]
+    ],
   );
 
   const subOverlayStyle: SubOverlayStyle = useMemo(
@@ -562,7 +571,7 @@ function AppContent({
       style: settings.subStyle,
       position: settings.subPosition,
     }),
-    [settings.subFontScale, settings.subColor, settings.subStyle, settings.subPosition]
+    [settings.subFontScale, settings.subColor, settings.subStyle, settings.subPosition],
   );
 
   const seekToFileCue = useCallback(
@@ -572,7 +581,7 @@ function AppContent({
       setPreviewTime(mediaTimeForCueStart(fileT, opts));
       setCenterTab('preview');
     },
-    [activeSubId, extSubs, setPreviewTime]
+    [activeSubId, extSubs, setPreviewTime],
   );
 
   // Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo (tracks + cue edits).
@@ -592,10 +601,10 @@ function AppContent({
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  const refreshHistory = async () => {
+  const refreshHistory = useCallback(async () => {
     const h = await window.api.history.list();
     setHistory(h);
-  };
+  }, []);
 
   const loadFile = async (pathStr: string) => {
     pushUndo();
@@ -620,7 +629,7 @@ function AppContent({
     pushLog(`נטען: ${f.name}`, 'info');
     pushLog(
       `probe ok · streams=${f.tracks.length} · audio=${f.tracks.filter((x) => x.kind === 'A').length} · subs=${f.tracks.filter((x) => x.kind === 'S').length}`,
-      'ok'
+      'ok',
     );
 
     const audio =
@@ -638,22 +647,25 @@ function AppContent({
     }
   };
 
-  const addSrtFromPaths = useCallback(async (paths: string[]) => {
-    let added = false;
-    for (const p of paths) {
-      const r = await window.api.srt.add(p);
-      if (r.ok && r.sub) {
-        setExtSubs((s) => [...s, r.sub!]);
-        setActiveSubId(r.sub!.id);
-        if (r.cues) {
-          setCuesBySubId((m) => ({ ...m, [r.sub!.id]: r.cues! }));
-        }
-        toast(`${t('subs_added')}: ${r.sub!.name}`, 'ok');
-        added = true;
-      } else toast(r.error || t('error'), 'err');
-    }
-    if (added) setCenterTab('preview');
-  }, [t]);
+  const addSrtFromPaths = useCallback(
+    async (paths: string[]) => {
+      let added = false;
+      for (const p of paths) {
+        const r = await window.api.srt.add(p);
+        if (r.ok && r.sub) {
+          setExtSubs((s) => [...s, r.sub!]);
+          setActiveSubId(r.sub!.id);
+          if (r.cues) {
+            setCuesBySubId((m) => ({ ...m, [r.sub!.id]: r.cues! }));
+          }
+          toast(`${t('subs_added')}: ${r.sub!.name}`, 'ok');
+          added = true;
+        } else toast(r.error || t('error'), 'err');
+      }
+      if (added) setCenterTab('preview');
+    },
+    [t, toast],
+  );
 
   const pickSrtFiles = async () => {
     const paths = await window.api.dialog.openSrt();
@@ -665,12 +677,12 @@ function AppContent({
       const global = Math.abs(sub.offset) > 1e-6 || Math.abs(sub.speed - 1) > 1e-5;
       return editedSubIds.has(sub.id) && global;
     },
-    [editedSubIds]
+    [editedSubIds],
   );
 
   const anyExtSubDoubleApply = useCallback(
     (): boolean => extSubs.some((s) => subNeedsDoubleApplyWarn(s)),
-    [extSubs, subNeedsDoubleApplyWarn]
+    [extSubs, subNeedsDoubleApplyWarn],
   );
 
   const doExportSrt = async (sub: ExternalSub): Promise<void> => {
@@ -744,7 +756,7 @@ function AppContent({
           return track;
         }
         return { ...track, keep: !track.keep };
-      })
+      }),
     );
   };
 
@@ -756,7 +768,7 @@ function AppContent({
       tr.map((t) => ({
         ...t,
         def: t.kind === target.kind ? t.id === id : t.def,
-      }))
+      })),
     );
   };
 
@@ -803,8 +815,7 @@ function AppContent({
     if (!settings.exportUseContentFolder) {
       return joinPath(isWin, destFolder, outName);
     }
-    const base =
-      contentType === 'movie' ? `${title} (${year})` : `${title} S${season}E${episode}`;
+    const base = contentType === 'movie' ? `${title} (${year})` : `${title} S${season}E${episode}`;
     return joinPath(isWin, destFolder, base, outName);
   }, [
     isWin,
@@ -830,8 +841,7 @@ function AppContent({
   }, [file, tracks]);
 
   const audioCount = tracks.filter((t) => t.keep && t.kind === 'A').length;
-  const subCount =
-    tracks.filter((t) => t.keep && t.kind === 'S').length + extSubs.length;
+  const subCount = tracks.filter((t) => t.keep && t.kind === 'S').length + extSubs.length;
 
   const activeSub = extSubs.find((s) => s.id === activeSubId);
 
@@ -868,8 +878,7 @@ function AppContent({
       encoding: s.encoding,
     }));
     const activeExtIdx = extSubs.findIndex((s) => s.id === activeSubId);
-    const burnInSubIndex =
-      settings.burnInSubs && activeExtIdx >= 0 ? activeExtIdx : null;
+    const burnInSubIndex = settings.burnInSubs && activeExtIdx >= 0 ? activeExtIdx : null;
     return {
       inputFile: file.path,
       externalSubs: extMeta,
@@ -971,8 +980,14 @@ function AppContent({
   };
 
   const addToBatch = async (): Promise<void> => {
-    if (!file || !title.trim()) { toast(t('missing_title_file'), 'warn'); return; }
-    if (!destFolder.trim()) { toast(t('dest_folder_missing'), 'warn'); return; }
+    if (!file || !title.trim()) {
+      toast(t('missing_title_file'), 'warn');
+      return;
+    }
+    if (!destFolder.trim()) {
+      toast(t('dest_folder_missing'), 'warn');
+      return;
+    }
     const plan = buildPlan();
     if (!plan) return;
     const extForRun: { path: string; offset: number; speed: number; encoding?: string }[] = [];
@@ -984,8 +999,13 @@ function AppContent({
         const list = cuesBySubId[s.id];
         if (list && list.length > 0) {
           const wr = await window.api.srt.writeCues(list, s.name.replace(/\.srt$/i, ''));
-          if (wr.ok && wr.path) { p = wr.path; planExt[i] = { ...planExt[i], path: p }; }
-          else { toast(`${t('write_edited_srt_failed')}: ${s.name}`, 'err'); return; }
+          if (wr.ok && wr.path) {
+            p = wr.path;
+            planExt[i] = { ...planExt[i], path: p };
+          } else {
+            toast(`${t('write_edited_srt_failed')}: ${s.name}`, 'err');
+            return;
+          }
         }
       }
       extForRun.push({ path: p, offset: s.offset, speed: s.speed, encoding: s.encoding });
@@ -1011,43 +1031,46 @@ function AppContent({
         q.map((x) =>
           x.id === item.id
             ? { ...x, status: ok ? 'done' : cancelled ? 'pending' : 'failed', error }
-            : x
-        )
+            : x,
+        ),
       );
     });
     await refreshHistory();
     showNotification('SubMixer', t('notify_batch_done'));
   };
 
-  const handleReExport = useCallback(async (plan: ExportPlan, durationSec: number): Promise<void> => {
-    if (exporting) {
-      toast(t('export_already_running'), 'warn');
-      return;
-    }
-    setShowHistory(false);
-    const extForRun = plan.externalSubs.map((s) => ({
-      path: s.path,
-      offset: s.offset,
-      speed: s.speed,
-      encoding: s.encoding,
-    }));
-    const label = plan.outputPath.split(/[/\\]/).pop() ?? plan.outputPath;
-    pushLog(`מריץ שוב: ${label}`, 'info');
-    toast(t('export_started'), 'info');
-    const r = await runExportJob(plan, durationSec, extForRun);
-    if (r.ok) {
-      toast(t('export_success'), 'ok');
-      pushLog(`נכתב: ${label}`, 'ok');
-      showNotification('SubMixer', t('notify_export_done'));
-    } else if (r.cancelled) {
-      toast(t('export_cancelled'), 'warn');
-      pushLog(t('export_cancelled'), 'warn');
-    } else {
-      toast(r.error || t('export_failed'), 'err');
-      pushLog(r.error || t('export_failed'), 'err');
-    }
-    await refreshHistory();
-  }, [exporting, t, runExportJob, refreshHistory, pushLog]);
+  const handleReExport = useCallback(
+    async (plan: ExportPlan, durationSec: number): Promise<void> => {
+      if (exporting) {
+        toast(t('export_already_running'), 'warn');
+        return;
+      }
+      setShowHistory(false);
+      const extForRun = plan.externalSubs.map((s) => ({
+        path: s.path,
+        offset: s.offset,
+        speed: s.speed,
+        encoding: s.encoding,
+      }));
+      const label = plan.outputPath.split(/[/\\]/).pop() ?? plan.outputPath;
+      pushLog(`מריץ שוב: ${label}`, 'info');
+      toast(t('export_started'), 'info');
+      const r = await runExportJob(plan, durationSec, extForRun);
+      if (r.ok) {
+        toast(t('export_success'), 'ok');
+        pushLog(`נכתב: ${label}`, 'ok');
+        showNotification('SubMixer', t('notify_export_done'));
+      } else if (r.cancelled) {
+        toast(t('export_cancelled'), 'warn');
+        pushLog(t('export_cancelled'), 'warn');
+      } else {
+        toast(r.error || t('export_failed'), 'err');
+        pushLog(r.error || t('export_failed'), 'err');
+      }
+      await refreshHistory();
+    },
+    [exporting, t, toast, runExportJob, refreshHistory, pushLog],
+  );
 
   const browseDest = async () => {
     const d = await window.api.dialog.chooseFolder(destFolder);
@@ -1085,13 +1108,11 @@ function AppContent({
         setFfmpegOk(ff.available);
         menuRef.current.toast(
           ff.available ? t('ffmpeg_available') : t('ffmpeg_not_found'),
-          ff.available ? 'ok' : 'warn'
+          ff.available ? 'ok' : 'warn',
         );
       });
     const about = () =>
-      void window.api.app.version().then((v) =>
-        alert(`SubMixer ${v}\n\n${t('about_text')}`)
-      );
+      void window.api.app.version().then((v) => alert(`SubMixer ${v}\n\n${t('about_text')}`));
 
     const unsubs = [
       window.api.menu.on('menu:openFile', openFile),
@@ -1105,6 +1126,9 @@ function AppContent({
       window.api.menu.on('menu:about', about),
     ];
     return () => unsubs.forEach((u) => u());
+    // Register native-menu listeners once; handlers read fresh state via menuRef,
+    // so this must not re-run (and thus re-subscribe) when `t`/state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -1121,7 +1145,11 @@ function AppContent({
       {!ffmpegOk && (
         <div className="ffmpeg-banner">
           <span>{t('ffmpeg_missing')}</span>
-          <button className="btn compact" type="button" onClick={() => window.api.ffmpeg.openInstallPage()}>
+          <button
+            className="btn compact"
+            type="button"
+            onClick={() => window.api.ffmpeg.openInstallPage()}
+          >
             {t('download')}
           </button>
         </div>
@@ -1249,9 +1277,7 @@ function AppContent({
                 onClick={() => setCenterTab('preview')}
               >
                 {t('center_tab_preview')}
-                {cues.length > 0 && (
-                  <span className="center-tab-count mono">{cues.length}</span>
-                )}
+                {cues.length > 0 && <span className="center-tab-count mono">{cues.length}</span>}
               </button>
             </div>
           )}
@@ -1467,8 +1493,13 @@ function AppContent({
           exporting={exporting}
           onClose={() => setShowBatchQueue(false)}
           onRemove={(id) => setBatchQueue((q) => q.filter((x) => x.id !== id))}
-          onRunAll={() => { setShowBatchQueue(false); void runBatchQueue(); }}
-          onClearDone={() => setBatchQueue((q) => q.filter((x) => x.status === 'pending' || x.status === 'running'))}
+          onRunAll={() => {
+            setShowBatchQueue(false);
+            void runBatchQueue();
+          }}
+          onClearDone={() =>
+            setBatchQueue((q) => q.filter((x) => x.status === 'pending' || x.status === 'running'))
+          }
         />
       )}
 

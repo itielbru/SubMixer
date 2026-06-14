@@ -66,7 +66,8 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
 }
 
 function assertString(v: unknown, name: string): asserts v is string {
-  if (typeof v !== 'string' || v.length === 0) throw new Error(`${name} must be a non-empty string`);
+  if (typeof v !== 'string' || v.length === 0)
+    throw new Error(`${name} must be a non-empty string`);
 }
 
 function assertAbsPath(v: string, name: string): void {
@@ -92,7 +93,7 @@ async function previewCacheId(filePath: string, trackIndex: number): Promise<str
 }
 
 async function prepareExternalSubs(
-  externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
+  externalSubs: { path: string; offset: number; speed: number; encoding?: string }[],
 ): Promise<string[]> {
   const processed: string[] = [];
   for (const s of externalSubs) {
@@ -137,54 +138,57 @@ export function registerIpc(): void {
     }
   });
 
-  ipcMain.handle('peaks:get', async (event, args: {
-    filePath: string;
-    trackIndex: number;
-    durationSec: number;
-  }) => {
-    if (peaksInFlight) return { ok: false, error: 'peaks extraction already running' };
-    peaksInFlight = true;
-    try {
-      assertString(args?.filePath, 'filePath');
-      assertAbsPath(args.filePath, 'filePath');
-      const win = senderWindow(event);
-      const cached = await loadCached(args.filePath, args.trackIndex);
-      if (cached) {
+  ipcMain.handle(
+    'peaks:get',
+    async (
+      event,
+      args: {
+        filePath: string;
+        trackIndex: number;
+        durationSec: number;
+      },
+    ) => {
+      if (peaksInFlight) return { ok: false, error: 'peaks extraction already running' };
+      peaksInFlight = true;
+      try {
+        assertString(args?.filePath, 'filePath');
+        assertAbsPath(args.filePath, 'filePath');
+        const win = senderWindow(event);
+        const cached = await loadCached(args.filePath, args.trackIndex);
+        if (cached) {
+          return {
+            ok: true,
+            fromCache: true,
+            peaksPerSec: cached.peaksPerSec,
+            durationSec: cached.durationSec,
+            min: cached.min,
+            max: cached.max,
+          };
+        }
+        const data = await extractPeaks(args.filePath, args.trackIndex, args.durationSec, (pct) =>
+          win?.webContents.send('peaks:progress', pct),
+        );
+        await saveCached(args.filePath, args.trackIndex, {
+          peaksPerSec: data.peaksPerSec,
+          durationSec: data.durationSec,
+          min: data.min,
+          max: data.max,
+        });
         return {
           ok: true,
-          fromCache: true,
-          peaksPerSec: cached.peaksPerSec,
-          durationSec: cached.durationSec,
-          min: cached.min,
-          max: cached.max,
+          fromCache: false,
+          peaksPerSec: data.peaksPerSec,
+          durationSec: data.durationSec,
+          min: data.min,
+          max: data.max,
         };
+      } catch (err) {
+        return { ok: false, error: (err as Error).message };
+      } finally {
+        peaksInFlight = false;
       }
-      const data = await extractPeaks(
-        args.filePath,
-        args.trackIndex,
-        args.durationSec,
-        (pct) => win?.webContents.send('peaks:progress', pct)
-      );
-      await saveCached(args.filePath, args.trackIndex, {
-        peaksPerSec: data.peaksPerSec,
-        durationSec: data.durationSec,
-        min: data.min,
-        max: data.max,
-      });
-      return {
-        ok: true,
-        fromCache: false,
-        peaksPerSec: data.peaksPerSec,
-        durationSec: data.durationSec,
-        min: data.min,
-        max: data.max,
-      };
-    } catch (err) {
-      return { ok: false, error: (err as Error).message };
-    } finally {
-      peaksInFlight = false;
-    }
-  });
+    },
+  );
 
   // ── Open dialogs ─────────────────────────────────────────────────────────
   ipcMain.handle('dialog:openVideo', async (event) => {
@@ -237,7 +241,9 @@ export function registerIpc(): void {
       const stat = await fs.stat(filePath);
       const { cues, encoding } = await readSrtFile(filePath);
 
-      const langMatch = path.basename(filePath).match(/\.(heb|eng|spa|ara|fre|fra|ger|deu|rus|jpn|por|ita|tur|nld|pol)\./i);
+      const langMatch = path
+        .basename(filePath)
+        .match(/\.(heb|eng|spa|ara|fre|fra|ger|deu|rus|jpn|por|ita|tur|nld|pol)\./i);
       const lang = langMatch ? langMatch[1].toLowerCase() : 'und';
       const langName: Record<string, string> = {
         heb: 'עברית',
@@ -308,208 +314,234 @@ export function registerIpc(): void {
     return result.filePath;
   });
 
-  ipcMain.handle('srt:save', async (_e, args: {
-    sourcePath: string;
-    destPath: string;
-    offset: number;
-    speed: number;
-    encoding?: string;
-  }) => {
-    try {
-      await exportTransformedSrt(args.sourcePath, args.destPath, {
-        offset: args.offset,
-        speed: args.speed,
-        encoding: args.encoding,
-      });
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: (err as Error).message };
-    }
-  });
+  ipcMain.handle(
+    'srt:save',
+    async (
+      _e,
+      args: {
+        sourcePath: string;
+        destPath: string;
+        offset: number;
+        speed: number;
+        encoding?: string;
+      },
+    ) => {
+      try {
+        await exportTransformedSrt(args.sourcePath, args.destPath, {
+          offset: args.offset,
+          speed: args.speed,
+          encoding: args.encoding,
+        });
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: (err as Error).message };
+      }
+    },
+  );
 
   // ── Audio preview ────────────────────────────────────────────────────────
-  ipcMain.handle('preview:extract', async (event, args: {
-    filePath: string;
-    trackIndex: number;
-    durationSec: number;
-    phase?: 'quick' | 'full';
-  }) => {
-    try {
-      assertString(args?.filePath, 'filePath');
-      assertAbsPath(args.filePath, 'filePath');
-      if (!Number.isInteger(args.trackIndex) || args.trackIndex < 0) {
-        throw new Error('trackIndex must be a non-negative integer');
-      }
-      const id = await previewCacheId(args.filePath, args.trackIndex);
-      const win = senderWindow(event);
-      const previewRoot = path.join(userDataPath(), 'temp', 'preview');
-      const fullPath = path.join(previewRoot, `${id}.m4a`);
-      const quickPath = path.join(previewRoot, `${id}.quick.m4a`);
-      const phase = args.phase ?? 'full';
-      log.debug('preview:extract', {
-        phase,
-        trackIndex: args.trackIndex,
-        durationSec: args.durationSec,
-      });
-      const quickSec = Math.min(
-        PREVIEW_QUICK_SECONDS,
-        Math.max(1, args.durationSec || PREVIEW_QUICK_SECONDS)
-      );
-
-      const sendProgress = (p: { percent: number; eta: string; timeSec: number }, progPhase: 'quick' | 'full') => {
-        const payload: PreviewProgress = { ...p, phase: progPhase };
-        win?.webContents.send('preview:progress', payload);
-      };
-
-      const fullCached = async () => {
-        try {
-          await fs.access(fullPath);
-          return {
-            ok: true as const,
-            path: fullPath,
-            url: 'submixer://preview?path=' + encodeURIComponent(fullPath),
-            cached: true,
-            tier: 'full' as const,
-          };
-        } catch {
-          return null;
+  ipcMain.handle(
+    'preview:extract',
+    async (
+      event,
+      args: {
+        filePath: string;
+        trackIndex: number;
+        durationSec: number;
+        phase?: 'quick' | 'full';
+      },
+    ) => {
+      try {
+        assertString(args?.filePath, 'filePath');
+        assertAbsPath(args.filePath, 'filePath');
+        if (!Number.isInteger(args.trackIndex) || args.trackIndex < 0) {
+          throw new Error('trackIndex must be a non-negative integer');
         }
-      };
+        const id = await previewCacheId(args.filePath, args.trackIndex);
+        const win = senderWindow(event);
+        const previewRoot = path.join(userDataPath(), 'temp', 'preview');
+        const fullPath = path.join(previewRoot, `${id}.m4a`);
+        const quickPath = path.join(previewRoot, `${id}.quick.m4a`);
+        const phase = args.phase ?? 'full';
+        log.debug('preview:extract', {
+          phase,
+          trackIndex: args.trackIndex,
+          durationSec: args.durationSec,
+        });
+        const quickSec = Math.min(
+          PREVIEW_QUICK_SECONDS,
+          Math.max(1, args.durationSec || PREVIEW_QUICK_SECONDS),
+        );
 
-      if (phase === 'quick') {
-        const hit = await fullCached();
-        if (hit) return hit;
+        const sendProgress = (
+          p: { percent: number; eta: string; timeSec: number },
+          progPhase: 'quick' | 'full',
+        ) => {
+          const payload: PreviewProgress = { ...p, phase: progPhase };
+          win?.webContents.send('preview:progress', payload);
+        };
 
-        try {
-          await fs.access(quickPath);
+        const fullCached = async () => {
+          try {
+            await fs.access(fullPath);
+            return {
+              ok: true as const,
+              path: fullPath,
+              url: 'submixer://preview?path=' + encodeURIComponent(fullPath),
+              cached: true,
+              tier: 'full' as const,
+            };
+          } catch {
+            return null;
+          }
+        };
+
+        if (phase === 'quick') {
+          const hit = await fullCached();
+          if (hit) return hit;
+
+          try {
+            await fs.access(quickPath);
+            return {
+              ok: true,
+              path: quickPath,
+              url: 'submixer://preview?path=' + encodeURIComponent(quickPath),
+              cached: true,
+              tier: 'quick',
+              limitSec: quickSec,
+            };
+          } catch {
+            /* extract quick */
+          }
+
+          const outPath = await extractAudioPreview(
+            args.filePath,
+            args.trackIndex,
+            `${id}.quick`,
+            (p) => sendProgress(p, 'quick'),
+            args.durationSec,
+            quickSec,
+          );
           return {
             ok: true,
-            path: quickPath,
-            url: 'submixer://preview?path=' + encodeURIComponent(quickPath),
-            cached: true,
+            path: outPath,
+            url: 'submixer://preview?path=' + encodeURIComponent(outPath),
+            cached: false,
             tier: 'quick',
             limitSec: quickSec,
           };
-        } catch {
-          /* extract quick */
         }
+
+        const hit = await fullCached();
+        if (hit) return hit;
 
         const outPath = await extractAudioPreview(
           args.filePath,
           args.trackIndex,
-          `${id}.quick`,
-          (p) => sendProgress(p, 'quick'),
+          id,
+          (p) => sendProgress(p, 'full'),
           args.durationSec,
-          quickSec
         );
         return {
           ok: true,
           path: outPath,
           url: 'submixer://preview?path=' + encodeURIComponent(outPath),
           cached: false,
-          tier: 'quick',
-          limitSec: quickSec,
+          tier: 'full',
         };
+      } catch (err) {
+        log.warn('preview:extract failed', {
+          phase: args.phase ?? 'full',
+          error: (err as Error).message,
+        });
+        return { ok: false, error: (err as Error).message };
       }
-
-      const hit = await fullCached();
-      if (hit) return hit;
-
-      const outPath = await extractAudioPreview(
-        args.filePath,
-        args.trackIndex,
-        id,
-        (p) => sendProgress(p, 'full'),
-        args.durationSec
-      );
-      return {
-        ok: true,
-        path: outPath,
-        url: 'submixer://preview?path=' + encodeURIComponent(outPath),
-        cached: false,
-        tier: 'full',
-      };
-    } catch (err) {
-      log.warn('preview:extract failed', {
-        phase: args.phase ?? 'full',
-        error: (err as Error).message,
-      });
-      return { ok: false, error: (err as Error).message };
-    }
-  });
+    },
+  );
 
   // ── Export ───────────────────────────────────────────────────────────────
-  ipcMain.handle('export:run', async (event, plan: ExportPlan, durationSec: number, externalSubs: {
-    path: string; offset: number; speed: number; encoding?: string;
-  }[]) => {
-    const win = senderWindow(event);
-    try {
-      assertString(plan?.inputFile, 'plan.inputFile');
-      assertAbsPath(plan.inputFile, 'plan.inputFile');
-      assertString(plan?.outputPath, 'plan.outputPath');
-      assertAbsPath(plan.outputPath, 'plan.outputPath');
-      const planError = validateExportPlan(plan);
-      if (planError) {
-        return { ok: false, code: null, cancelled: false, error: planError };
-      }
+  ipcMain.handle(
+    'export:run',
+    async (
+      event,
+      plan: ExportPlan,
+      durationSec: number,
+      externalSubs: {
+        path: string;
+        offset: number;
+        speed: number;
+        encoding?: string;
+      }[],
+    ) => {
+      const win = senderWindow(event);
+      try {
+        assertString(plan?.inputFile, 'plan.inputFile');
+        assertAbsPath(plan.inputFile, 'plan.inputFile');
+        assertString(plan?.outputPath, 'plan.outputPath');
+        assertAbsPath(plan.outputPath, 'plan.outputPath');
+        const planError = validateExportPlan(plan);
+        if (planError) {
+          return { ok: false, code: null, cancelled: false, error: planError };
+        }
 
-      // Normalize external subs to temp SRT (handles VTT/ASS + offset/speed + encoding)
-      const processed = await prepareExternalSubs(externalSubs);
+        // Normalize external subs to temp SRT (handles VTT/ASS + offset/speed + encoding)
+        const processed = await prepareExternalSubs(externalSubs);
 
-      const result = await runExport(
-        plan,
-        processed,
-        durationSec,
-        (p) => win?.webContents.send('export:progress', p),
-        (line) => win?.webContents.send('export:log', line)
-      );
-
-      // Reconstruct plan with original sub paths for history (temp paths are gone after clearTempSrt)
-      const planForHistory = {
-        ...plan,
-        externalSubs: plan.externalSubs.map((s, i) => ({
-          ...s,
-          path: externalSubs[i]?.path ?? s.path,
-        })),
-      };
-      if (result.ok) {
-        const outStat = await fs.stat(plan.outputPath).catch(() => null);
-        const sizeStr = outStat ? fmtSize(outStat.size) : '—';
-        const now = new Date();
-        const time = now.toTimeString().slice(0, 8);
-        await addHistoryEntry({
-          name: path.basename(plan.outputPath),
-          path: plan.outputPath,
-          size: sizeStr,
-          time,
-          ok: true,
-          plan: planForHistory,
+        const result = await runExport(
+          plan,
+          processed,
           durationSec,
-        });
-      } else if (!result.cancelled) {
-        const now = new Date();
-        await addHistoryEntry({
-          name: path.basename(plan.outputPath),
-          path: plan.outputPath,
-          size: '—',
-          time: now.toTimeString().slice(0, 8),
-          ok: false,
-          plan: planForHistory,
-          durationSec,
-        });
+          (p) => win?.webContents.send('export:progress', p),
+          (line) => win?.webContents.send('export:log', line),
+        );
+
+        // Reconstruct plan with original sub paths for history (temp paths are gone after clearTempSrt)
+        const planForHistory = {
+          ...plan,
+          externalSubs: plan.externalSubs.map((s, i) => ({
+            ...s,
+            path: externalSubs[i]?.path ?? s.path,
+          })),
+        };
+        if (result.ok) {
+          const outStat = await fs.stat(plan.outputPath).catch(() => null);
+          const sizeStr = outStat ? fmtSize(outStat.size) : '—';
+          const now = new Date();
+          const time = now.toTimeString().slice(0, 8);
+          await addHistoryEntry({
+            name: path.basename(plan.outputPath),
+            path: plan.outputPath,
+            size: sizeStr,
+            time,
+            ok: true,
+            plan: planForHistory,
+            durationSec,
+          });
+        } else if (!result.cancelled) {
+          const now = new Date();
+          await addHistoryEntry({
+            name: path.basename(plan.outputPath),
+            path: plan.outputPath,
+            size: '—',
+            time: now.toTimeString().slice(0, 8),
+            ok: false,
+            plan: planForHistory,
+            durationSec,
+          });
+        }
+        // Clean up the temp SRTs after export
+        await clearTempSrt();
+        return {
+          ok: result.ok,
+          code: result.code,
+          cancelled: result.cancelled,
+          error: result.error,
+        };
+      } catch (err) {
+        return { ok: false, code: null, cancelled: false, error: (err as Error).message };
       }
-      // Clean up the temp SRTs after export
-      await clearTempSrt();
-      return {
-        ok: result.ok,
-        code: result.code,
-        cancelled: result.cancelled,
-        error: result.error,
-      };
-    } catch (err) {
-      return { ok: false, code: null, cancelled: false, error: (err as Error).message };
-    }
-  });
+    },
+  );
 
   ipcMain.handle('export:cancel', async () => {
     return cancelActiveExport();
@@ -526,14 +558,21 @@ export function registerIpc(): void {
 
   // ── Settings + history ───────────────────────────────────────────────────
   ipcMain.handle('settings:get', async () => getSettings());
-  ipcMain.handle('settings:setOne', async <K extends keyof AppSettings>(event: IpcMainInvokeEvent, key: K, value: AppSettings[K]) => {
-    const updated = await setSetting(key, value);
-    if (key === 'lang') {
-      const win = senderWindow(event);
-      if (win) buildMenu(win, value as 'he' | 'en');
-    }
-    return updated;
-  });
+  ipcMain.handle(
+    'settings:setOne',
+    async <K extends keyof AppSettings>(
+      event: IpcMainInvokeEvent,
+      key: K,
+      value: AppSettings[K],
+    ) => {
+      const updated = await setSetting(key, value);
+      if (key === 'lang') {
+        const win = senderWindow(event);
+        if (win) buildMenu(win, value as 'he' | 'en');
+      }
+      return updated;
+    },
+  );
   ipcMain.handle('settings:setMany', async (event, patch: Partial<AppSettings>) => {
     const updated = await setSettings(patch);
     if (patch.lang !== undefined) {
@@ -546,7 +585,12 @@ export function registerIpc(): void {
   ipcMain.handle('history:list', async () => (await getSettings()).history);
   ipcMain.handle('history:clear', async () => clearHistory());
 
-  ipcMain.handle('fs:exists', async (_e, p: string) => fs.stat(p).then(() => true).catch(() => false));
+  ipcMain.handle('fs:exists', async (_e, p: string) =>
+    fs
+      .stat(p)
+      .then(() => true)
+      .catch(() => false),
+  );
 
   ipcMain.handle('shell:openPath', async (_e, p: string) => shell.openPath(p));
   ipcMain.handle('shell:showItem', async (_e, p: string) => shell.showItemInFolder(p));
@@ -556,13 +600,13 @@ export function registerIpc(): void {
   ipcMain.handle('app:version', async () => app.getVersion());
 
   ipcMain.handle('app:nativeTheme', async () =>
-    nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+    nativeTheme.shouldUseDarkColors ? 'dark' : 'light',
   );
 
   nativeTheme.on('updated', () => {
     const resolved = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
     BrowserWindow.getAllWindows().forEach((w) =>
-      w.webContents.send('nativeTheme:updated', resolved)
+      w.webContents.send('nativeTheme:updated', resolved),
     );
   });
 

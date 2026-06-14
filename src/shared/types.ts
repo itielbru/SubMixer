@@ -70,7 +70,16 @@ export interface SrtCue {
 
 export interface ExportPlan {
   inputFile: string;
-  externalSubs: { path: string; lang: string; def: boolean; forced: boolean; offset: number; speed: number; trackName: string; encoding: string; }[];
+  externalSubs: {
+    path: string;
+    lang: string;
+    def: boolean;
+    forced: boolean;
+    offset: number;
+    speed: number;
+    trackName: string;
+    encoding: string;
+  }[];
   videoTrackId: number | null;
   audioTracks: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
   embeddedSubs: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
