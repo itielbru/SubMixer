@@ -74,3 +74,35 @@ jobs:
           GITHUB_REF: refs/tags/v${{ steps.ver.outputs.version }}
           CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
+
+      - name: Publish and clean up draft releases
+        shell: pwsh
+        run: |
+          $version = "v${{ steps.ver.outputs.version }}"
+          $headers = @{
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            Accept        = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $repo = $env:GITHUB_REPOSITORY
+          $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases" -Headers $headers
+          $drafts = $releases | Where-Object { $_.tag_name -eq $version -and $_.draft -eq $true } `
+                              | Sort-Object id -Descending
+          $first = $true
+          foreach ($d in $drafts) {
+            if ($first) {
+              $body = @{ draft = $false; name = "SubMixer $version" } | ConvertTo-Json
+              Invoke-RestMethod -Method Patch `
+                -Uri "https://api.github.com/repos/$repo/releases/$($d.id)" `
+                -Headers $headers -Body $body -ContentType "application/json" | Out-Null
+              Write-Host "Published release $($d.id) as $version"
+              $first = $false
+            } else {
+              Invoke-RestMethod -Method Delete `
+                -Uri "https://api.github.com/repos/$repo/releases/$($d.id)" `
+                -Headers $headers
+              Write-Host "Deleted duplicate draft $($d.id)"
+            }
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
