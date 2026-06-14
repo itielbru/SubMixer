@@ -461,6 +461,14 @@ export function registerIpc(): void {
         (line) => win?.webContents.send('export:log', line)
       );
 
+      // Reconstruct plan with original sub paths for history (temp paths are gone after clearTempSrt)
+      const planForHistory = {
+        ...plan,
+        externalSubs: plan.externalSubs.map((s, i) => ({
+          ...s,
+          path: externalSubs[i]?.path ?? s.path,
+        })),
+      };
       if (result.ok) {
         const outStat = await fs.stat(plan.outputPath).catch(() => null);
         const sizeStr = outStat ? fmtSize(outStat.size) : '—';
@@ -472,6 +480,8 @@ export function registerIpc(): void {
           size: sizeStr,
           time,
           ok: true,
+          plan: planForHistory,
+          durationSec,
         });
       } else if (!result.cancelled) {
         const now = new Date();
@@ -481,6 +491,8 @@ export function registerIpc(): void {
           size: '—',
           time: now.toTimeString().slice(0, 8),
           ok: false,
+          plan: planForHistory,
+          durationSec,
         });
       }
       // Clean up the temp SRTs after export

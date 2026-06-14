@@ -254,6 +254,7 @@ export const translations = {
     export_success: 'הייצוא הסתיים בהצלחה ✓',
     export_cancelled: 'הייצוא בוטל',
     export_failed: 'ייצוא נכשל',
+    export_already_running: 'ייצוא כבר פועל — המתן לסיומו',
     drag_overlay: 'שחרר כאן כדי לפתוח קובץ',
 
     open_dialog_title: 'בחר קובץ וידאו',
@@ -268,6 +269,9 @@ export const translations = {
     history_show_in_folder: 'הצג בתיקייה',
     hist_ok: '✓ הצליח',
     hist_fail: '✗ נכשל',
+    hist_reexport: 'ייצא שוב',
+    notify_export_done: 'ייצוא הושלם בהצלחה',
+    notify_batch_done: 'תור הייצוא הסתיים',
 
     ffmpeg_modal_title: 'פקודת FFmpeg',
     ffmpeg_modal_desc: 'באפשרותך להעתיק פקודה זו ולהריץ אותה ישירות ב-Terminal/PowerShell:',
@@ -585,6 +589,7 @@ export const translations = {
     export_success: 'Export completed successfully ✓',
     export_cancelled: 'Export cancelled',
     export_failed: 'Export failed',
+    export_already_running: 'Export already in progress — wait for it to finish',
     drag_overlay: 'Drop here to open file',
 
     open_dialog_title: 'Open Video File',
@@ -599,6 +604,9 @@ export const translations = {
     history_show_in_folder: 'Show in Folder',
     hist_ok: '✓ Success',
     hist_fail: '✗ Failed',
+    hist_reexport: 'Re-export',
+    notify_export_done: 'Export complete',
+    notify_batch_done: 'Batch queue complete',
 
     ffmpeg_modal_title: 'FFmpeg Command',
     ffmpeg_modal_desc: 'Copy and run this command in Terminal or PowerShell:',

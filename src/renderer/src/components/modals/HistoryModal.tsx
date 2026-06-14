@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ExportRecord } from '@shared/types';
+import type { ExportPlan, ExportRecord } from '@shared/types';
 import { Ico, I } from '../ui/Icons';
 import { useT } from '../../hooks/useTranslation';
 import { Modal } from '../ui/Modal';
@@ -9,9 +9,10 @@ interface HistoryModalProps {
   onClose: () => void;
   onClear: () => void;
   onShow: (path: string) => void;
+  onReExport?: (plan: ExportPlan, durationSec: number) => void;
 }
 
-export function HistoryModal({ history, onClose, onClear, onShow }: HistoryModalProps) {
+export function HistoryModal({ history, onClose, onClear, onShow, onReExport }: HistoryModalProps) {
   const { t } = useT();
 
   return (
@@ -50,6 +51,15 @@ export function HistoryModal({ history, onClose, onClear, onShow }: HistoryModal
               <div className={`hist-tag ${h.ok ? 'ok' : 'err'}`}>
                 {h.ok ? t('hist_ok') : t('hist_fail')}
               </div>
+              {h.ok && h.plan && onReExport && (
+                <button
+                  className="btn ghost compact"
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onReExport(h.plan!, h.durationSec ?? 0); }}
+                >
+                  {t('hist_reexport')}
+                </button>
+              )}
             </div>
           ))
         )}

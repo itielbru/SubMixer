@@ -35,6 +35,7 @@ import { useSettings } from './hooks/useSettings';
 import { useExport } from './hooks/useExport';
 import { usePreview } from './hooks/usePreview';
 import { joinPath } from './lib/path';
+import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
 
 interface LogLine {
@@ -920,6 +921,7 @@ function AppContent({
     if (r.ok) {
       toast(t('export_success'), 'ok');
       pushLog(`נכתב: ${outName}`, 'ok');
+      showNotification('SubMixer', t('notify_export_done'));
     } else if (r.cancelled) {
       toast(t('export_cancelled'), 'warn');
       pushLog(t('export_cancelled'), 'warn');
@@ -984,7 +986,38 @@ function AppContent({
       );
     });
     await refreshHistory();
+    showNotification('SubMixer', t('notify_batch_done'));
   };
+
+  const handleReExport = useCallback(async (plan: ExportPlan, durationSec: number): Promise<void> => {
+    if (exporting) {
+      toast(t('export_already_running'), 'warn');
+      return;
+    }
+    setShowHistory(false);
+    const extForRun = plan.externalSubs.map((s) => ({
+      path: s.path,
+      offset: s.offset,
+      speed: s.speed,
+      encoding: s.encoding,
+    }));
+    const label = plan.outputPath.split(/[/\\]/).pop() ?? plan.outputPath;
+    pushLog(`מריץ שוב: ${label}`, 'info');
+    toast(t('export_started'), 'info');
+    const r = await runExportJob(plan, durationSec, extForRun);
+    if (r.ok) {
+      toast(t('export_success'), 'ok');
+      pushLog(`נכתב: ${label}`, 'ok');
+      showNotification('SubMixer', t('notify_export_done'));
+    } else if (r.cancelled) {
+      toast(t('export_cancelled'), 'warn');
+      pushLog(t('export_cancelled'), 'warn');
+    } else {
+      toast(r.error || t('export_failed'), 'err');
+      pushLog(r.error || t('export_failed'), 'err');
+    }
+    await refreshHistory();
+  }, [exporting, t, runExportJob, refreshHistory, pushLog]);
 
   const browseDest = async () => {
     const d = await window.api.dialog.chooseFolder(destFolder);
@@ -1283,6 +1316,7 @@ function AppContent({
           onClose={() => setShowHistory(false)}
           onClear={() => void window.api.history.clear().then(refreshHistory)}
           onShow={(p) => void window.api.shellOps.showItem(p)}
+          onReExport={handleReExport}
         />
       )}
 

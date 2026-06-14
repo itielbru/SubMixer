@@ -99,6 +99,8 @@ export interface ExportRecord {
   size: string;
   time: string;
   ok: boolean;
+  plan?: ExportPlan;
+  durationSec?: number;
 }
 
 /** Subtitle quality warning thresholds (user configurable). */
