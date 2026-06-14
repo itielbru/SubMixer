@@ -36,7 +36,9 @@ async function createWindow(): Promise<void> {
     icon: join(__dirname, '../../build/icon.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      // The preload uses only ipcRenderer + contextBridge (both sandbox-safe),
+      // so we run the renderer in a sandbox for defence-in-depth.
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
     },

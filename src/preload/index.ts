@@ -186,10 +186,3 @@ const api = {
 export type SubMixerApi = typeof api;
 
 contextBridge.exposeInMainWorld('api', api);
-
-// Also expose a tiny `electron` namespace for compatibility helpers
-contextBridge.exposeInMainWorld('electron', {
-  ipcRenderer: {
-    invoke: (...args: Parameters<typeof ipcRenderer.invoke>) => ipcRenderer.invoke(...args),
-  },
-});
