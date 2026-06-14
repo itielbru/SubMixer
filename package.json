@@ -1,6 +1,6 @@
 {
   "name": "submixer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "SubMixer — Mux video tracks and external subtitles, with offset/speed sync.",
   "main": "./out/main/index.js",
   "author": "Itiel",
@@ -28,11 +28,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "setup:ffmpeg": "node scripts/setup-ffmpeg.cjs",
+    "setup:fonts": "node scripts/setup-fonts.cjs",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
@@ -51,9 +53,9 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "@vitest/coverage-v8": "^2.1.9",
-    "electron": "^31.2.0",
-    "electron-builder": "^24.13.3",
-    "electron-vite": "^2.3.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^5.0.0",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -65,6 +67,8 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.59.4",
     "vite": "^5.3.4",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "@playwright/test": "^1.49.0",
+    "playwright": "^1.49.0"
   }
 }

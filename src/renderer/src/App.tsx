@@ -27,12 +27,15 @@ import { AdjustAllTimesModal } from './components/modals/AdjustAllTimesModal';
 import { FixCommonErrorsModal } from './components/modals/FixCommonErrorsModal';
 import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
+import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
 import { useSettings } from './hooks/useSettings';
 import { useExport } from './hooks/useExport';
 import { usePreview } from './hooks/usePreview';
 import { joinPath } from './lib/path';
+import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
 
 interface LogLine {
@@ -67,7 +70,7 @@ function AppContent({
     [pushLog]
   );
 
-  const { exporting, progress, eta: exportEta, start: runExportJob, cancel: cancelExportJob } =
+  const { exporting, progress, eta: exportEta, start: runExportJob, cancel: cancelExportJob, runBatch } =
     useExport(onExportLog);
 
   const [isWin, setIsWin] = useState(true);
@@ -125,6 +128,7 @@ function AppContent({
     extractPhase,
     audioMode,
     audioLimitSec,
+    extractFailed,
     requestAudioExtract,
     resetOnFileChange,
   } = usePreview(file, previewAudioId, onPreviewError);
@@ -143,6 +147,8 @@ function AppContent({
   const [exportConfirm, setExportConfirm] = useState<'mux' | { kind: 'srt'; sub: ExternalSub } | null>(
     null
   );
+  const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
+  const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -611,8 +617,7 @@ function AppContent({
     }
   };
 
-  const pickSrtFiles = async () => {
-    const paths = await window.api.dialog.openSrt();
+  const addSrtFromPaths = useCallback(async (paths: string[]) => {
     let added = false;
     for (const p of paths) {
       const r = await window.api.srt.add(p);
@@ -627,6 +632,11 @@ function AppContent({
       } else toast(r.error || t('error'), 'err');
     }
     if (added) setCenterTab('preview');
+  }, [t]);
+
+  const pickSrtFiles = async () => {
+    const paths = await window.api.dialog.openSrt();
+    await addSrtFromPaths(paths);
   };
 
   const subNeedsDoubleApplyWarn = useCallback(
@@ -911,6 +921,7 @@ function AppContent({
     if (r.ok) {
       toast(t('export_success'), 'ok');
       pushLog(`נכתב: ${outName}`, 'ok');
+      showNotification('SubMixer', t('notify_export_done'));
     } else if (r.cancelled) {
       toast(t('export_cancelled'), 'warn');
       pushLog(t('export_cancelled'), 'warn');
@@ -928,6 +939,85 @@ function AppContent({
     }
     await doMuxExport();
   };
+
+  const addToBatch = async (): Promise<void> => {
+    if (!file || !title.trim()) { toast(t('missing_title_file'), 'warn'); return; }
+    if (!destFolder.trim()) { toast(t('dest_folder_missing'), 'warn'); return; }
+    const plan = buildPlan();
+    if (!plan) return;
+    const extForRun: { path: string; offset: number; speed: number; encoding?: string }[] = [];
+    const planExt = plan.externalSubs.slice();
+    for (let i = 0; i < extSubs.length; i++) {
+      const s = extSubs[i];
+      let p = s.path;
+      if (editedSubIds.has(s.id)) {
+        const list = cuesBySubId[s.id];
+        if (list && list.length > 0) {
+          const wr = await window.api.srt.writeCues(list, s.name.replace(/\.srt$/i, ''));
+          if (wr.ok && wr.path) { p = wr.path; planExt[i] = { ...planExt[i], path: p }; }
+          else { toast(`${t('write_edited_srt_failed')}: ${s.name}`, 'err'); return; }
+        }
+      }
+      extForRun.push({ path: p, offset: s.offset, speed: s.speed, encoding: s.encoding });
+    }
+    plan.externalSubs = planExt;
+    const item: BatchItem = {
+      id: `${Date.now()}-${Math.random()}`,
+      label: outName,
+      plan,
+      durationSec: file.durationSec,
+      extSubs: extForRun,
+      status: 'pending',
+    };
+    setBatchQueue((q) => [...q, item]);
+    toast(`${t('batch_added')}: ${outName}`, 'ok');
+  };
+
+  const runBatchQueue = async (): Promise<void> => {
+    const pending = batchQueue.filter((x) => x.status === 'pending');
+    await runBatch(pending, (idx, ok, cancelled, error) => {
+      const item = pending[idx];
+      setBatchQueue((q) =>
+        q.map((x) =>
+          x.id === item.id
+            ? { ...x, status: ok ? 'done' : cancelled ? 'pending' : 'failed', error }
+            : x
+        )
+      );
+    });
+    await refreshHistory();
+    showNotification('SubMixer', t('notify_batch_done'));
+  };
+
+  const handleReExport = useCallback(async (plan: ExportPlan, durationSec: number): Promise<void> => {
+    if (exporting) {
+      toast(t('export_already_running'), 'warn');
+      return;
+    }
+    setShowHistory(false);
+    const extForRun = plan.externalSubs.map((s) => ({
+      path: s.path,
+      offset: s.offset,
+      speed: s.speed,
+      encoding: s.encoding,
+    }));
+    const label = plan.outputPath.split(/[/\\]/).pop() ?? plan.outputPath;
+    pushLog(`מריץ שוב: ${label}`, 'info');
+    toast(t('export_started'), 'info');
+    const r = await runExportJob(plan, durationSec, extForRun);
+    if (r.ok) {
+      toast(t('export_success'), 'ok');
+      pushLog(`נכתב: ${label}`, 'ok');
+      showNotification('SubMixer', t('notify_export_done'));
+    } else if (r.cancelled) {
+      toast(t('export_cancelled'), 'warn');
+      pushLog(t('export_cancelled'), 'warn');
+    } else {
+      toast(r.error || t('export_failed'), 'err');
+      pushLog(r.error || t('export_failed'), 'err');
+    }
+    await refreshHistory();
+  }, [exporting, t, runExportJob, refreshHistory, pushLog]);
 
   const browseDest = async () => {
     const d = await window.api.dialog.chooseFolder(destFolder);
@@ -990,6 +1080,7 @@ function AppContent({
   return (
     <div
       className="proto"
+      data-testid="app-root"
       onDragOver={(e) => {
         e.preventDefault();
         setDragOver(true);
@@ -1121,6 +1212,7 @@ function AppContent({
               audioMode={audioMode}
               audioLimitSec={audioLimitSec}
               onRequestAudioExtract={requestAudioExtract}
+              extractFailed={extractFailed}
               onAudioError={(m) => toast(m, 'err')}
               peaks={peaks}
               peaksLoading={peaksLoading}
@@ -1158,6 +1250,7 @@ function AppContent({
             activeSubId={activeSubId}
             onSelectSub={setActiveSubId}
             onAddSubs={() => void pickSrtFiles()}
+            onDropFiles={addSrtFromPaths}
             onRemoveSub={removeSub}
             onUpdateSub={updateSub}
             onExportSrt={(s) => void handleExportSrt(s)}
@@ -1176,6 +1269,8 @@ function AppContent({
         drawerOpen={drawerOpen}
         onToggleDrawer={() => setDrawerOpen((d) => !d)}
         onShowFfmpeg={() => void openCmdModal()}
+        onOpenQueue={() => setShowBatchQueue(true)}
+        batchCount={batchQueue.filter((x) => x.status === 'pending').length}
         logs={logs}
         estMB={estSize}
         audioCount={audioCount}
@@ -1184,6 +1279,7 @@ function AppContent({
         progress={progress}
         exportEta={exportEta}
         onExport={() => void handleExport()}
+        onAddToQueue={() => void addToBatch()}
         onCancelExport={() => void cancelExportJob()}
         canExport={!!file && !!title.trim() && ffmpegOk}
       />
@@ -1220,6 +1316,7 @@ function AppContent({
           onClose={() => setShowHistory(false)}
           onClear={() => void window.api.history.clear().then(refreshHistory)}
           onShow={(p) => void window.api.shellOps.showItem(p)}
+          onReExport={handleReExport}
         />
       )}
 
@@ -1292,6 +1389,17 @@ function AppContent({
         />
       )}
 
+      {showBatchQueue && (
+        <BatchQueueModal
+          items={batchQueue}
+          exporting={exporting}
+          onClose={() => setShowBatchQueue(false)}
+          onRemove={(id) => setBatchQueue((q) => q.filter((x) => x.id !== id))}
+          onRunAll={() => { setShowBatchQueue(false); void runBatchQueue(); }}
+          onClearDone={() => setBatchQueue((q) => q.filter((x) => x.status === 'pending' || x.status === 'running'))}
+        />
+      )}
+
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>
   );
@@ -1300,8 +1408,10 @@ function AppContent({
 export default function App() {
   const [settings, setOne] = useSettings();
   return (
-    <I18nProvider lang={settings.lang ?? 'he'}>
-      <AppContent settings={settings} setOne={setOne} />
-    </I18nProvider>
+    <ErrorBoundary>
+      <I18nProvider lang={settings.lang ?? 'he'}>
+        <AppContent settings={settings} setOne={setOne} />
+      </I18nProvider>
+    </ErrorBoundary>
   );
 }

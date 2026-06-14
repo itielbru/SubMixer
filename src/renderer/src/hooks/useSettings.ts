@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AppSettings } from '@shared/types';
 import { applyTheme } from '../lib/theme';
 
 const DEFAULT: AppSettings = {
-  theme: 'dark',
+  theme: 'system',
   accent: 'indigo',
   font: 'Heebo',
   lang: 'he',
@@ -29,13 +29,20 @@ export function useSettings(): [
   (patch: Partial<AppSettings>) => Promise<void>,
 ] {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT);
+  const resolvedNativeRef = useRef<'dark' | 'light' | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    window.api.settings.get().then((s) => {
+    window.api.settings.get().then(async (s) => {
       if (!mounted) return;
       setSettings(s);
-      applyTheme(s);
+      if (s.theme === 'system') {
+        const resolved = await window.api.app.nativeTheme();
+        resolvedNativeRef.current = resolved;
+        if (mounted) applyTheme(s, resolved);
+      } else {
+        applyTheme(s);
+      }
     });
     return () => {
       mounted = false;
@@ -43,8 +50,25 @@ export function useSettings(): [
   }, []);
 
   useEffect(() => {
-    applyTheme(settings);
+    if (settings.theme === 'system') {
+      window.api.app.nativeTheme().then((resolved) => {
+        resolvedNativeRef.current = resolved;
+        applyTheme(settings, resolved);
+      });
+    } else {
+      applyTheme(settings);
+    }
   }, [settings.theme, settings.accent, settings.font]);
+
+  useEffect(() => {
+    return window.api.app.onNativeThemeUpdated((resolved) => {
+      resolvedNativeRef.current = resolved;
+      setSettings((s) => {
+        if (s.theme === 'system') applyTheme(s, resolved);
+        return s;
+      });
+    });
+  }, []);
 
   const setOne = useCallback(async <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [key]: value }));

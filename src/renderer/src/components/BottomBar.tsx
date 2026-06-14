@@ -13,6 +13,8 @@ interface Props {
   drawerOpen: boolean;
   onToggleDrawer: () => void;
   onShowFfmpeg: () => void;
+  onOpenQueue: () => void;
+  batchCount: number;
   logs: LogLine[];
   estMB: number;
   audioCount: number;
@@ -21,6 +23,7 @@ interface Props {
   progress: number;
   exportEta: string;
   onExport: () => void;
+  onAddToQueue: () => void;
   onCancelExport: () => void;
   canExport: boolean;
 }
@@ -29,6 +32,8 @@ export function BottomBar({
   drawerOpen,
   onToggleDrawer,
   onShowFfmpeg,
+  onOpenQueue,
+  batchCount,
   logs,
   estMB,
   audioCount,
@@ -37,6 +42,7 @@ export function BottomBar({
   progress,
   exportEta,
   onExport,
+  onAddToQueue,
   onCancelExport,
   canExport,
 }: Props) {
@@ -51,6 +57,14 @@ export function BottomBar({
         </button>
         <button className="btn ghost compact" type="button" onClick={onShowFfmpeg}>
           <Ico d={I.copy} size={12} /> {t('ffmpeg_cmd')}
+        </button>
+        <button
+          className="btn ghost compact"
+          type="button"
+          onClick={onOpenQueue}
+          title={t('batch_queue_title')}
+        >
+          {t('batch_queue_btn')}{batchCount > 0 ? ` (${batchCount})` : ''}
         </button>
       </div>
 
@@ -82,7 +96,16 @@ export function BottomBar({
               <span className="ct mono">{audioCount}A</span>
               <span className="ct mono">{subCount}S</span>
             </div>
-            <button className="btn primary" type="button" onClick={onExport} disabled={!canExport}>
+            <button
+              className="btn ghost compact"
+              type="button"
+              onClick={onAddToQueue}
+              disabled={!canExport}
+              title={t('batch_add_tip')}
+            >
+              + {t('batch_queue_btn')}
+            </button>
+            <button className="btn primary" type="button" onClick={onExport} disabled={!canExport} data-testid="export-btn">
               <Ico d={I.zap} size={13} /> {t('export_btn')}
             </button>
           </>

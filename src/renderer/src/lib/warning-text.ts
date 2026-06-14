@@ -20,6 +20,8 @@ export function warningReasonText(w: CueWarnings, t: (key: I18nKey) => string): 
       return `${t('warn_long')} (${w.durationSec.toFixed(1)}s)`;
     case 'shortGap':
       return t('warn_short_gap');
+    case 'overrun':
+      return t('warn_overrun');
     default:
       return '';
   }

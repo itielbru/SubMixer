@@ -4,7 +4,7 @@ import { app } from 'electron';
 import type { AppSettings, ExportRecord } from '@shared/types';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: 'dark',
+  theme: 'system',
   accent: 'indigo',
   font: 'Heebo',
   lang: 'he',

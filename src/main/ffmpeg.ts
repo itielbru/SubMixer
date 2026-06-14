@@ -370,6 +370,11 @@ export async function extractAudioPreview(
     const child = spawn(status.ffmpegPath, args, { windowsHide: true });
     activePreview = child;
 
+    const timer = setTimeout(() => {
+      try { child.kill('SIGINT'); } catch { /* */ }
+      rejectP(new Error('FFmpeg preview timed out after 3 minutes'));
+    }, 180_000);
+
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString();
       const m = text.match(/time=(\d+):(\d+):(\d+)\.(\d+)/);
@@ -385,8 +390,9 @@ export async function extractAudioPreview(
       }
     });
 
-    child.on('error', rejectP);
+    child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
     child.on('close', (code) => {
+      clearTimeout(timer);
       activePreview = null;
       if (code === 0) resolveP(outPath);
       else rejectP(new Error(`ffmpeg exited with code ${code}`));
@@ -443,6 +449,11 @@ export async function extractPeaks(
       stderr += b.toString();
     });
 
+    const timer = setTimeout(() => {
+      try { child.kill('SIGINT'); } catch { /* */ }
+      rejectP(new Error('FFmpeg peaks extraction timed out after 2 minutes'));
+    }, 120_000);
+
     const ensureCapacity = (need: number): void => {
       if (need <= min.length) return;
       let cap = min.length;
@@ -485,8 +496,9 @@ export async function extractPeaks(
       }
     });
 
-    child.on('error', rejectP);
+    child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
     child.on('close', (code) => {
+      clearTimeout(timer);
       if (code !== 0) {
         return rejectP(
           new Error(`ffmpeg peaks failed (${code}): ${stderr.trim().slice(0, 400)}`)

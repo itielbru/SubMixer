@@ -42,6 +42,8 @@ interface Props {
   audioLimitSec: number | null;
   /** Kick off extraction on demand (manual fallback). */
   onRequestAudioExtract: () => void;
+  /** True if the last extraction attempt failed (shows Retry button). */
+  extractFailed?: boolean;
   /** Surface audio playback failures to the parent (toast). */
   onAudioError?: (msg: string) => void;
   peaks: Peaks | null;
@@ -82,6 +84,7 @@ export function PreviewBar({
   audioMode,
   audioLimitSec,
   onRequestAudioExtract,
+  extractFailed,
   onAudioError,
   peaks,
   peaksLoading,
@@ -505,6 +508,16 @@ export function PreviewBar({
               onDelete={() => selectedIdx >= 0 && onDeleteCue(selectedIdx)}
             />
           )}
+          {extractFailed && (
+            <button
+              type="button"
+              className="speed-btn warn"
+              onClick={onRequestAudioExtract}
+              title={t('retry_extract_tip')}
+            >
+              ↺ {t('retry_label')}
+            </button>
+          )}
           <button
             type="button"
             className="speed-btn"
@@ -584,6 +597,7 @@ export function PreviewBar({
           playheadIdx={currentCueIdx}
           lang={cuesLang}
           warnThresholds={warnThresholds}
+          videoDurationSec={durationSec}
           onSelect={setSelectedIdx}
           onUpdateCue={onUpdateCue}
           onDeleteCue={onDeleteCue}

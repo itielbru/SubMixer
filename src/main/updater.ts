@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import pkg from 'electron-updater';
 import log from './logger';
 
@@ -22,11 +22,14 @@ export function initAutoUpdate(): void {
   }
 
   autoUpdater.logger = log;
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('checking-for-update', () => log.info('Checking for updates…'));
-  autoUpdater.on('update-available', (info) => log.info('Update available', info?.version));
+  autoUpdater.on('update-available', (info) => {
+    log.info('Update available', info?.version);
+    BrowserWindow.getAllWindows()[0]?.webContents.send('update:available', info?.version ?? '');
+  });
   autoUpdater.on('update-not-available', () => log.info('No update available'));
   autoUpdater.on('update-downloaded', (info) => log.info('Update downloaded', info?.version));
   autoUpdater.on('error', (err) => log.warn('Auto-update error', err?.message ?? String(err)));

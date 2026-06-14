@@ -8,6 +8,33 @@ import { clearTempSrt } from './srt';
 // instead of wiping them on every launch.
 const PREVIEW_CACHE_MAX = 500 * 1024 * 1024; // 500 MB (extracted audio previews)
 const PEAKS_CACHE_MAX = 200 * 1024 * 1024; // 200 MB (waveform peaks)
+const PEAKS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/** Delete cache files older than `maxAgeMs` (by whichever of mtime/atime is more recent). */
+export async function evictByAge(dir: string, maxAgeMs: number): Promise<void> {
+  let names: string[];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return;
+  }
+  const cutoff = Date.now() - maxAgeMs;
+  let evicted = 0;
+  for (const name of names) {
+    const full = path.join(dir, name);
+    try {
+      const st = await fs.stat(full);
+      if (!st.isFile()) continue;
+      if (Math.max(st.atimeMs, st.mtimeMs) < cutoff) {
+        await fs.unlink(full);
+        evicted++;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (evicted > 0) log.info('TTL eviction', { dir, evicted });
+}
 
 /** Delete oldest files in `dir` until its total size is under `maxBytes`. */
 async function enforceCacheQuota(dir: string, maxBytes: number): Promise<void> {
@@ -58,6 +85,7 @@ export async function runStartupMaintenance(): Promise<void> {
   const userData = app.getPath('userData');
   try {
     await clearTempSrt(); // ephemeral transformed SRTs (safe to drop)
+    await evictByAge(path.join(userData, 'peaks-cache'), PEAKS_TTL_MS);
     await enforceCacheQuota(path.join(userData, 'temp', 'preview'), PREVIEW_CACHE_MAX);
     await enforceCacheQuota(path.join(userData, 'peaks-cache'), PEAKS_CACHE_MAX);
   } catch (err) {

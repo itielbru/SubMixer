@@ -140,6 +140,12 @@ const api = {
   app: {
     platform: (): Promise<string> => ipcRenderer.invoke('app:platform'),
     version: (): Promise<string> => ipcRenderer.invoke('app:version'),
+    nativeTheme: (): Promise<'dark' | 'light'> => ipcRenderer.invoke('app:nativeTheme'),
+    onNativeThemeUpdated: (cb: (theme: 'dark' | 'light') => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, t: 'dark' | 'light') => cb(t);
+      ipcRenderer.on('nativeTheme:updated', handler);
+      return () => ipcRenderer.removeListener('nativeTheme:updated', handler);
+    },
   },
 
   debug: {

@@ -8,10 +8,14 @@ export const ACCENTS: Record<AppSettings['accent'], { name: string; hex: string 
   crimson: { name: 'ארגמן', hex: '#d14e6b' },
 };
 
-export function applyTheme(s: Pick<AppSettings, 'theme' | 'accent' | 'font'>): void {
+export function applyTheme(
+  s: Pick<AppSettings, 'theme' | 'accent' | 'font'>,
+  resolvedTheme?: 'dark' | 'light'
+): void {
   const a = ACCENTS[s.accent] || ACCENTS.indigo;
   const root = document.documentElement;
-  const isDark = s.theme === 'dark';
+  const effective = resolvedTheme ?? (s.theme === 'system' ? 'dark' : s.theme);
+  const isDark = effective === 'dark';
   const tokens: Record<string, string> = isDark
     ? {
         '--bg': '#0d0e11',

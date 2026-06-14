@@ -17,7 +17,8 @@ export type WarningReasonKey =
   | 'fastCps'
   | 'short'
   | 'long'
-  | 'shortGap';
+  | 'shortGap'
+  | 'overrun';
 
 export interface CueWarnings {
   level: WarningLevel;
@@ -34,6 +35,7 @@ export interface CueWarnings {
   overlapsNext: boolean;
   shortGapPrev: boolean;
   shortGapNext: boolean;
+  overrun: boolean;
 }
 
 export function visibleLen(text: string): number {
@@ -50,7 +52,8 @@ export function computeWarnings(
   cue: SrtCue,
   prev: SrtCue | undefined,
   next: SrtCue | undefined,
-  thresholds: CueWarningThresholds = DEFAULT_CUE_WARNING_THRESHOLDS
+  thresholds: CueWarningThresholds = DEFAULT_CUE_WARNING_THRESHOLDS,
+  videoDurationSec?: number
 ): CueWarnings {
   const dur = Math.max(0, cue.end - cue.start);
   const chars = visibleLen(cue.text);
@@ -66,6 +69,8 @@ export function computeWarnings(
     !!prev && !overlapsPrev && cue.start - prev.end < thresholds.minGapSec;
   const shortGapNext =
     !!next && !overlapsNext && next.start - cue.end < thresholds.minGapSec;
+  const overrun =
+    videoDurationSec !== undefined && videoDurationSec > 0 && cue.end > videoDurationSec + 1e-3;
 
   let level: WarningLevel = 'ok';
   let reasonKey: WarningReasonKey | null = null;
@@ -87,6 +92,9 @@ export function computeWarnings(
   } else if (shortGapPrev || shortGapNext) {
     level = 'warn';
     reasonKey = 'shortGap';
+  } else if (overrun) {
+    level = 'warn';
+    reasonKey = 'overrun';
   }
 
   return {
@@ -102,5 +110,6 @@ export function computeWarnings(
     overlapsNext,
     shortGapPrev,
     shortGapNext,
+    overrun,
   };
 }

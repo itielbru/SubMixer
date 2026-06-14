@@ -99,6 +99,8 @@ export interface ExportRecord {
   size: string;
   time: string;
   ok: boolean;
+  plan?: ExportPlan;
+  durationSec?: number;
 }
 
 /** Subtitle quality warning thresholds (user configurable). */
@@ -111,7 +113,7 @@ export interface CueWarningThresholds {
 }
 
 export interface AppSettings {
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'system';
   accent: 'indigo' | 'graphite' | 'emerald' | 'amber' | 'crimson';
   font: 'Heebo' | 'Assistant';
   lang: 'he' | 'en';

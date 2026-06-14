@@ -4,6 +4,7 @@ import { fixOverlapsAndShortGaps } from '../../lib/fix-timing';
 import { Ico, I } from '../ui/Icons';
 import { useT } from '../../hooks/useTranslation';
 import type { I18nKey } from '@shared/i18n';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   cues: SrtCue[];
@@ -50,68 +51,66 @@ export function FixCommonErrorsModal({ cues, minGapSec, onApply, onClose }: Prop
   );
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-h">
-          <div className="modal-t">{t('fix_errors_title')}</div>
-          <button className="icon-btn" type="button" onClick={onClose}>
-            <Ico d={I.x} />
+    <Modal onClose={onClose} label={t('fix_errors_title')} className="modal-wide">
+      <div className="modal-h">
+        <div className="modal-t">{t('fix_errors_title')}</div>
+        <button className="icon-btn" type="button" onClick={onClose}>
+          <Ico d={I.x} />
+        </button>
+      </div>
+      <div className="modal-b">
+        <p className="sync-hint">{t('fix_errors_hint')}</p>
+        <label className="cb">
+          <span
+            className={`cb-box ${fixOverlaps ? 'on' : ''}`}
+            onClick={() => setFixOverlaps((v) => !v)}
+          >
+            {fixOverlaps && <Ico d={I.check} size={10} />}
+          </span>
+          <span onClick={() => setFixOverlaps((v) => !v)}>{t('fix_errors_overlaps')}</span>
+        </label>
+        <label className="cb">
+          <span
+            className={`cb-box ${fixGaps ? 'on' : ''}`}
+            onClick={() => setFixGaps((v) => !v)}
+          >
+            {fixGaps && <Ico d={I.check} size={10} />}
+          </span>
+          <span onClick={() => setFixGaps((v) => !v)}>{t('fix_errors_gaps')}</span>
+        </label>
+
+        <div className="fix-preview mt12">
+          <div className="fix-preview-title">
+            {t('fix_errors_changes')}: {readableChanges.length}
+          </div>
+          {readableChanges.length === 0 ? (
+            <div className="small">{t('fix_errors_none')}</div>
+          ) : (
+            <ul className="fix-list">
+              {readableChanges.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button className="btn ghost" type="button" onClick={onClose}>
+            {t('cancel')}
+          </button>
+          <button
+            className="btn primary"
+            type="button"
+            disabled={readableChanges.length === 0}
+            onClick={() => {
+              onApply(preview.cues);
+              onClose();
+            }}
+          >
+            {t('fix_errors_apply')}
           </button>
         </div>
-        <div className="modal-b">
-          <p className="sync-hint">{t('fix_errors_hint')}</p>
-          <label className="cb">
-            <span
-              className={`cb-box ${fixOverlaps ? 'on' : ''}`}
-              onClick={() => setFixOverlaps((v) => !v)}
-            >
-              {fixOverlaps && <Ico d={I.check} size={10} />}
-            </span>
-            <span onClick={() => setFixOverlaps((v) => !v)}>{t('fix_errors_overlaps')}</span>
-          </label>
-          <label className="cb">
-            <span
-              className={`cb-box ${fixGaps ? 'on' : ''}`}
-              onClick={() => setFixGaps((v) => !v)}
-            >
-              {fixGaps && <Ico d={I.check} size={10} />}
-            </span>
-            <span onClick={() => setFixGaps((v) => !v)}>{t('fix_errors_gaps')}</span>
-          </label>
-
-          <div className="fix-preview mt12">
-            <div className="fix-preview-title">
-              {t('fix_errors_changes')}: {readableChanges.length}
-            </div>
-            {readableChanges.length === 0 ? (
-              <div className="small">{t('fix_errors_none')}</div>
-            ) : (
-              <ul className="fix-list">
-                {readableChanges.map((line, i) => (
-                  <li key={i}>{line}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="modal-actions">
-            <button className="btn ghost" type="button" onClick={onClose}>
-              {t('cancel')}
-            </button>
-            <button
-              className="btn primary"
-              type="button"
-              disabled={readableChanges.length === 0}
-              onClick={() => {
-                onApply(preview.cues);
-                onClose();
-              }}
-            >
-              {t('fix_errors_apply')}
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
