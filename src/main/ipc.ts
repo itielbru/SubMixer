@@ -450,6 +450,28 @@ export function registerIpc(): void {
         return { ok: false, code: null, cancelled: false, error: planError };
       }
 
+      // Overwrite protection: if output file already exists ask user to confirm.
+      const outputExists = await fs.access(plan.outputPath).then(() => true).catch(() => false);
+      if (outputExists) {
+        const lang = (await getSettings()).lang;
+        const { response } = await dialog.showMessageBox(win!, {
+          type: 'question',
+          buttons: [
+            lang === 'he' ? 'דרוס' : 'Replace',
+            lang === 'he' ? 'ביטול' : 'Cancel',
+          ],
+          defaultId: 0,
+          cancelId: 1,
+          title: lang === 'he' ? 'הקובץ קיים' : 'File already exists',
+          message: lang === 'he'
+            ? `"${path.basename(plan.outputPath)}" כבר קיים. לדרוס אותו?`
+            : `"${path.basename(plan.outputPath)}" already exists. Replace it?`,
+        });
+        if (response === 1) {
+          return { ok: false, code: null, cancelled: true };
+        }
+      }
+
       // Normalize external subs to temp SRT (handles VTT/ASS + offset/speed + encoding)
       const processed = await prepareExternalSubs(externalSubs);
 
