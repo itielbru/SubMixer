@@ -15,6 +15,16 @@ async function hashKey(filePath: string, trackIndex: number): Promise<string> {
   h.update(String(Math.floor(stat.mtimeMs)));
   h.update('::');
   h.update(String(trackIndex));
+  h.update('::');
+  // Hash first 64 KB to detect content changes that don't affect mtime/size
+  const fd = await fs.open(filePath, 'r');
+  try {
+    const buf = Buffer.allocUnsafe(65536);
+    const { bytesRead } = await fd.read(buf, 0, 65536, 0);
+    h.update(buf.subarray(0, bytesRead));
+  } finally {
+    await fd.close();
+  }
   return h.digest('hex');
 }
 

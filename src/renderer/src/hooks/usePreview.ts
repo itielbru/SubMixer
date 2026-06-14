@@ -62,6 +62,8 @@ export function usePreview(
 
   const [audioLimitSec, setAudioLimitSec] = useState<number | null>(null);
 
+  const [extractFailed, setExtractFailed] = useState(false);
+
   const pipelineKeyRef = useRef('');
 
   const pipelineGenRef = useRef(0);
@@ -170,6 +172,8 @@ export function usePreview(
 
     setAudioMode('extracting');
 
+    setExtractFailed(false);
+
     setExtractPhase('quick');
 
     setAudioPct(0);
@@ -227,6 +231,8 @@ export function usePreview(
       setAudioMode('video');
 
       setExtractPhase(null);
+
+      setExtractFailed(true);
 
       if (quick.error) onErrorRef.current?.(quick.error);
 
@@ -386,6 +392,8 @@ export function usePreview(
 
     setExtractPhase(null);
 
+    setExtractFailed(false);
+
     setAudioPct(0);
 
     if (!file || previewAudioId === null) {
@@ -485,6 +493,8 @@ export function usePreview(
     audioMode,
 
     audioLimitSec,
+
+    extractFailed,
 
     requestAudioExtract,
 

@@ -95,4 +95,33 @@ describe('computeWarnings', () => {
     expect(w.level).toBe('ok');
     expect(w.reasonKey).toBeNull();
   });
+
+  describe('overrun (cue extends past video end)', () => {
+    it('flags overrun as a warning when cue.end > videoDurationSec', () => {
+      const w = computeWarnings(cue(58, 62, 'hi'), undefined, undefined, undefined, 60);
+      expect(w.overrun).toBe(true);
+      expect(w.level).toBe('warn');
+      expect(w.reasonKey).toBe('overrun');
+    });
+
+    it('does not flag overrun when cue ends exactly at video duration', () => {
+      const w = computeWarnings(cue(58, 60, 'hi'), undefined, undefined, undefined, 60);
+      expect(w.overrun).toBe(false);
+    });
+
+    it('does not flag overrun when videoDurationSec is not provided', () => {
+      const w = computeWarnings(cue(58, 62, 'hi'), undefined, undefined);
+      expect(w.overrun).toBe(false);
+      expect(w.level).toBe('ok');
+    });
+
+    it('overlap takes priority over overrun', () => {
+      // Overlaps previous AND overruns — overlap should win (err level)
+      const w = computeWarnings(cue(4, 62), cue(0, 5), undefined, undefined, 60);
+      expect(w.overlapsPrev).toBe(true);
+      expect(w.overrun).toBe(true);
+      expect(w.level).toBe('err');
+      expect(w.reasonKey).toBe('overlap');
+    });
+  });
 });

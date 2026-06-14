@@ -132,7 +132,7 @@ export function TracksList({
         <span style={{ textAlign: 'end' }}>{t('th_keep')}</span>
       </div>
 
-      <div className="tracks-body">
+      <div className="tracks-body" role="list">
         {visible.length === 0 ? (
           <div className="empty">{t('no_tracks')}</div>
         ) : (
@@ -142,9 +142,11 @@ export function TracksList({
             return (
               <div
                 key={tr.id}
+                role="listitem"
                 className="trow"
                 data-keep={tr.keep}
                 data-active={activeId === tr.id}
+                aria-selected={activeId === tr.id}
                 onClick={() => onSelect(tr.id)}
               >
                 <span className="rail"></span>

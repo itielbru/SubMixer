@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { SrtCue } from '@shared/types';
 import { Ico, I } from '../ui/Icons';
 import { useT } from '../../hooks/useTranslation';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   cues: SrtCue[];
@@ -45,69 +46,67 @@ export function FindReplaceModal({
   };
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-h">
-          <div className="modal-t">{t('find_replace_title')}</div>
-          <button className="icon-btn" type="button" onClick={onClose}>
-            <Ico d={I.x} />
+    <Modal onClose={onClose} label={t('find_replace_title')}>
+      <div className="modal-h">
+        <div className="modal-t">{t('find_replace_title')}</div>
+        <button className="icon-btn" type="button" onClick={onClose}>
+          <Ico d={I.x} />
+        </button>
+      </div>
+      <div className="modal-b">
+        <label className="field">
+          <span>{t('find_replace_find')}</span>
+          <input value={find} onChange={(e) => setFind(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>{t('find_replace_replace')}</span>
+          <input value={replace} onChange={(e) => setReplace(e.target.value)} />
+        </label>
+        <label className="cb">
+          <span
+            className={`cb-box ${fromSelected ? 'on' : ''}`}
+            onClick={() => setFromSelected((v) => !v)}
+          >
+            {fromSelected && <Ico d={I.check} size={10} />}
+          </span>
+          <span onClick={() => setFromSelected((v) => !v)}>
+            {t('find_replace_from_selected')}
+          </span>
+        </label>
+        {find && (
+          <div className="small mono mt8">
+            {t('find_replace_matches')}: {matchCount}
+          </div>
+        )}
+
+        <div className="modal-actions">
+          <button className="btn ghost" type="button" onClick={onClose}>
+            {t('cancel')}
+          </button>
+          <button
+            className="btn ghost"
+            type="button"
+            disabled={selectedIdx < 0}
+            onClick={() => {
+              onDuplicate(selectedIdx);
+              onClose();
+            }}
+          >
+            {t('duplicate_cue')}
+          </button>
+          <button
+            className="btn primary"
+            type="button"
+            disabled={!find || matchCount === 0}
+            onClick={() => {
+              doReplaceAll();
+              onClose();
+            }}
+          >
+            {t('find_replace_apply')}
           </button>
         </div>
-        <div className="modal-b">
-          <label className="field">
-            <span>{t('find_replace_find')}</span>
-            <input value={find} onChange={(e) => setFind(e.target.value)} />
-          </label>
-          <label className="field">
-            <span>{t('find_replace_replace')}</span>
-            <input value={replace} onChange={(e) => setReplace(e.target.value)} />
-          </label>
-          <label className="cb">
-            <span
-              className={`cb-box ${fromSelected ? 'on' : ''}`}
-              onClick={() => setFromSelected((v) => !v)}
-            >
-              {fromSelected && <Ico d={I.check} size={10} />}
-            </span>
-            <span onClick={() => setFromSelected((v) => !v)}>
-              {t('find_replace_from_selected')}
-            </span>
-          </label>
-          {find && (
-            <div className="small mono mt8">
-              {t('find_replace_matches')}: {matchCount}
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button className="btn ghost" type="button" onClick={onClose}>
-              {t('cancel')}
-            </button>
-            <button
-              className="btn ghost"
-              type="button"
-              disabled={selectedIdx < 0}
-              onClick={() => {
-                onDuplicate(selectedIdx);
-                onClose();
-              }}
-            >
-              {t('duplicate_cue')}
-            </button>
-            <button
-              className="btn primary"
-              type="button"
-              disabled={!find || matchCount === 0}
-              onClick={() => {
-                doReplaceAll();
-                onClose();
-              }}
-            >
-              {t('find_replace_apply')}
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

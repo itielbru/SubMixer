@@ -4,6 +4,7 @@ import { computeVisualSync } from '@shared/cue-sync';
 import { fmtTimeMs } from '../../lib/format';
 import { Ico, I } from '../ui/Icons';
 import { useT } from '../../hooks/useTranslation';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   cues: SrtCue[];
@@ -36,15 +37,14 @@ export function VisualSyncModal({ cues, previewT, onSeek, onApply, onClose }: Pr
   const canApply = result !== null && startIdx <= endIdx;
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-h">
-          <div className="modal-t">{t('visual_sync_title')}</div>
-          <button className="icon-btn" type="button" onClick={onClose}>
-            <Ico d={I.x} />
-          </button>
-        </div>
-        <div className="modal-b sync-wizard">
+    <Modal onClose={onClose} label={t('visual_sync_title')} className="modal-wide">
+      <div className="modal-h">
+        <div className="modal-t">{t('visual_sync_title')}</div>
+        <button className="icon-btn" type="button" onClick={onClose}>
+          <Ico d={I.x} />
+        </button>
+      </div>
+      <div className="modal-b sync-wizard">
           <p className="sync-hint">{t('visual_sync_hint')}</p>
 
           <div className="sync-block">
@@ -171,8 +171,7 @@ export function VisualSyncModal({ cues, previewT, onSeek, onApply, onClose }: Pr
               {t('visual_sync_apply')}
             </button>
           </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

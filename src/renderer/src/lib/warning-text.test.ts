@@ -35,4 +35,10 @@ describe('warningReasonText', () => {
     const w = computeWarnings(cue(0, 0.5, 'hi'), undefined, undefined);
     expect(warningReasonText(w, en)).toBe('Too short (0.50s)');
   });
+
+  it('localizes the overrun reason', () => {
+    const w = computeWarnings(cue(58, 62, 'hi'), undefined, undefined, undefined, 60);
+    expect(warningReasonText(w, en)).toBe('Cue extends past video end');
+    expect(warningReasonText(w, he)).toBe('Cue חורג מעבר לסוף הסרט');
+  });
 });

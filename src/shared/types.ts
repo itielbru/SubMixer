@@ -111,7 +111,7 @@ export interface CueWarningThresholds {
 }
 
 export interface AppSettings {
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'system';
   accent: 'indigo' | 'graphite' | 'emerald' | 'amber' | 'crimson';
   font: 'Heebo' | 'Assistant';
   lang: 'he' | 'en';

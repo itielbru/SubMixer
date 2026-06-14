@@ -4,6 +4,7 @@ import { Ico, I } from '../ui/Icons';
 import { ACCENTS } from '../../lib/theme';
 import { Dropdown } from '../ui/Dropdown';
 import { useT } from '../../hooks/useTranslation';
+import { Modal } from '../ui/Modal';
 
 interface Props {
   settings: AppSettings;
@@ -16,14 +17,13 @@ export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: P
   const { t } = useT();
 
   return (
-    <div className="modal-bg" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-h">
-          <div className="modal-t">{t('settings_title')}</div>
-          <button className="icon-btn" onClick={onClose}>
-            <Ico d={I.x} />
-          </button>
-        </div>
+    <Modal onClose={onClose} label={t('settings_title')}>
+      <div className="modal-h">
+        <div className="modal-t">{t('settings_title')}</div>
+        <button className="icon-btn" type="button" onClick={onClose}>
+          <Ico d={I.x} />
+        </button>
+      </div>
         <div className="modal-b">
           <div className="settings-grid">
             <label>{t('settings_theme')}</label>
@@ -39,6 +39,13 @@ export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: P
                 onClick={() => onChange('theme', 'light')}
               >
                 {t('theme_light')}
+              </button>
+              <button
+                type="button"
+                className={settings.theme === 'system' ? 'on' : ''}
+                onClick={() => onChange('theme', 'system')}
+              >
+                {t('theme_system')}
               </button>
             </div>
 
@@ -233,7 +240,6 @@ export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: P
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

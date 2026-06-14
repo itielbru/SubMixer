@@ -19,6 +19,7 @@ interface Props {
   onShiftSelection: (deltaSec: number, indices: number[]) => void;
   onSeek: (t: number) => void;
   warnThresholds: CueWarningThresholds;
+  videoDurationSec?: number;
   onSplitCue?: (idx: number, mode: 'playhead' | 'newline') => void;
   onMergeCue?: (idx: number) => void;
   onOpenFixErrors?: () => void;
@@ -43,6 +44,7 @@ function CueListViewImpl({
   onShiftSelection,
   onSeek,
   warnThresholds,
+  videoDurationSec,
   onSplitCue,
   onMergeCue,
   onOpenFixErrors,
@@ -66,8 +68,8 @@ function CueListViewImpl({
   const scrollRafRef = useRef(0);
 
   const warnings = useMemo<CueWarnings[]>(
-    () => cues.map((c, i) => computeWarnings(c, cues[i - 1], cues[i + 1], warnThresholds)),
-    [cues, warnThresholds]
+    () => cues.map((c, i) => computeWarnings(c, cues[i - 1], cues[i + 1], warnThresholds, videoDurationSec)),
+    [cues, warnThresholds, videoDurationSec]
   );
 
   const timingIssueCount = useMemo(() => countTimingIssues(warnings), [warnings]);
@@ -194,9 +196,9 @@ function CueListViewImpl({
   return (
     <div className="cl">
       <div className="cl-toolbar">
-        <span className="cl-title">רשימת cues</span>
+        <span className="cl-title">{t('cue_list_title')}</span>
         {selectedIndices.length > 1 && (
-          <span className="cl-counter mono">{selectedIndices.length} נבחרו</span>
+          <span className="cl-counter mono">{t('n_selected').replace('{n}', String(selectedIndices.length))}</span>
         )}
         <div className="cl-tools">
           {timingIssueCount > 0 && onOpenFixErrors && (
@@ -227,26 +229,34 @@ function CueListViewImpl({
             type="button"
             onClick={deleteSelection}
             disabled={selectedIndices.length === 0}
-            title="מחק את כל הבחירה"
+            title={t('delete_selection_tip')}
           >
-            <Ico d={I.trash} size={11} /> מחק
+            <Ico d={I.trash} size={11} /> {t('delete_label')}
           </button>
         </div>
       </div>
 
       <p className="cl-file-hint">{t('file_edit_hint')}</p>
 
-      <div className="cl-head">
+      <div className="cl-head" role="row" aria-hidden>
         <span>#</span>
-        <span>התחלה</span>
-        <span>סיום</span>
-        <span>משך</span>
+        <span>{t('cl_start')}</span>
+        <span>{t('cl_end')}</span>
+        <span>{t('duration')}</span>
         <span>CPS</span>
-        <span>טקסט</span>
+        <span>{t('th_name_info')}</span>
         <span></span>
       </div>
 
-      <div className="cl-rows" ref={rowsRef} onScroll={onRowsScroll}>
+      <div
+        className="cl-rows"
+        ref={rowsRef}
+        onScroll={onRowsScroll}
+        role="grid"
+        aria-multiselectable="true"
+        aria-rowcount={total}
+        aria-label={t('cue_list_title')}
+      >
         {topPad > 0 && <div style={{ height: topPad }} aria-hidden />}
         {cues.slice(startIdx, endIdx).map((cue, j) => {
           const i = startIdx + j;
@@ -258,6 +268,9 @@ function CueListViewImpl({
           return (
             <div
               key={i}
+              role="row"
+              aria-selected={isSelected}
+              aria-rowindex={i + 1}
               className={`cl-row lvl-${w.level} ${isSelected ? 'sel' : ''} ${
                 isPlayhead ? 'now' : ''
               }`}
@@ -350,7 +363,7 @@ function CueListViewImpl({
           );
         })}
         {botPad > 0 && <div style={{ height: botPad }} aria-hidden />}
-        {cues.length === 0 && <div className="cl-empty">אין cues להצגה</div>}
+        {cues.length === 0 && <div className="cl-empty">{t('cl_no_cues')}</div>}
       </div>
 
       {ctx && (

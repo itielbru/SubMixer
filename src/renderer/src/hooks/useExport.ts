@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ExportPlan, ExportProgress } from '@shared/types';
 
+export interface BatchJob {
+  plan: ExportPlan;
+  durationSec: number;
+  extSubs: { path: string; offset: number; speed: number; encoding?: string }[];
+}
+
 export interface UseExportApi {
   exporting: boolean;
   progress: number;
@@ -11,6 +17,10 @@ export interface UseExportApi {
     externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
   ) => Promise<{ ok: boolean; cancelled: boolean; error?: string }>;
   cancel: () => Promise<void>;
+  runBatch: (
+    jobs: BatchJob[],
+    onJobDone?: (idx: number, ok: boolean, cancelled: boolean, error?: string) => void
+  ) => Promise<void>;
 }
 
 export function useExport(onLog?: (line: string) => void): UseExportApi {
@@ -48,5 +58,17 @@ export function useExport(onLog?: (line: string) => void): UseExportApi {
     await window.api.exporting.cancel();
   }, []);
 
-  return { exporting, progress, eta, start, cancel };
+  const runBatch = useCallback(async (
+    jobs: BatchJob[],
+    onJobDone?: (idx: number, ok: boolean, cancelled: boolean, error?: string) => void
+  ): Promise<void> => {
+    for (let i = 0; i < jobs.length; i++) {
+      const j = jobs[i];
+      const r = await start(j.plan, j.durationSec, j.extSubs);
+      onJobDone?.(i, r.ok, r.cancelled, r.error);
+      if (r.cancelled) break;
+    }
+  }, [start]);
+
+  return { exporting, progress, eta, start, cancel, runBatch };
 }

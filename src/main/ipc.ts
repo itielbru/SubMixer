@@ -6,6 +6,7 @@ import {
   BrowserWindow,
   IpcMainInvokeEvent,
   protocol,
+  nativeTheme,
 } from 'electron';
 import { promises as fs, createReadStream } from 'fs';
 import { Readable } from 'stream';
@@ -63,7 +64,16 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
+function assertString(v: unknown, name: string): asserts v is string {
+  if (typeof v !== 'string' || v.length === 0) throw new Error(`${name} must be a non-empty string`);
+}
+
+function assertAbsPath(v: string, name: string): void {
+  if (!path.isAbsolute(v)) throw new Error(`${name} must be an absolute path`);
+}
+
 let nextSubId = 1;
+let peaksInFlight = false;
 
 const allowedMediaPaths = new Set<string>();
 
@@ -113,6 +123,8 @@ export function registerIpc(): void {
   // ── Probe video ──────────────────────────────────────────────────────────
   ipcMain.handle('media:probe', async (_e, filePath: string): Promise<ProbeResult> => {
     try {
+      assertString(filePath, 'filePath');
+      assertAbsPath(filePath, 'filePath');
       const file = await probe(filePath);
       allowedMediaPaths.add(path.resolve(filePath));
       await addRecentFile(filePath);
@@ -127,7 +139,11 @@ export function registerIpc(): void {
     trackIndex: number;
     durationSec: number;
   }) => {
+    if (peaksInFlight) return { ok: false, error: 'peaks extraction already running' };
+    peaksInFlight = true;
     try {
+      assertString(args?.filePath, 'filePath');
+      assertAbsPath(args.filePath, 'filePath');
       const win = senderWindow(event);
       const cached = await loadCached(args.filePath, args.trackIndex);
       if (cached) {
@@ -162,6 +178,8 @@ export function registerIpc(): void {
       };
     } catch (err) {
       return { ok: false, error: (err as Error).message };
+    } finally {
+      peaksInFlight = false;
     }
   });
 
@@ -211,6 +229,8 @@ export function registerIpc(): void {
   // ── SRT ──────────────────────────────────────────────────────────────────
   ipcMain.handle('srt:add', async (_e, filePath: string): Promise<AddSubResult> => {
     try {
+      assertString(filePath, 'filePath');
+      assertAbsPath(filePath, 'filePath');
       const stat = await fs.stat(filePath);
       const { cues, encoding } = await readSrtFile(filePath);
 
@@ -252,6 +272,8 @@ export function registerIpc(): void {
 
   ipcMain.handle('srt:read', async (_e, filePath: string) => {
     try {
+      assertString(filePath, 'filePath');
+      assertAbsPath(filePath, 'filePath');
       const { cues, encoding, size } = await readSrtFile(filePath);
       return { ok: true, cues, encoding, size };
     } catch (err) {
@@ -310,6 +332,11 @@ export function registerIpc(): void {
     phase?: 'quick' | 'full';
   }) => {
     try {
+      assertString(args?.filePath, 'filePath');
+      assertAbsPath(args.filePath, 'filePath');
+      if (!Number.isInteger(args.trackIndex) || args.trackIndex < 0) {
+        throw new Error('trackIndex must be a non-negative integer');
+      }
       const id = await previewCacheId(args.filePath, args.trackIndex);
       const win = senderWindow(event);
       const previewRoot = path.join(userDataPath(), 'temp', 'preview');
@@ -414,6 +441,10 @@ export function registerIpc(): void {
   }[]) => {
     const win = senderWindow(event);
     try {
+      assertString(plan?.inputFile, 'plan.inputFile');
+      assertAbsPath(plan.inputFile, 'plan.inputFile');
+      assertString(plan?.outputPath, 'plan.outputPath');
+      assertAbsPath(plan.outputPath, 'plan.outputPath');
       const planError = validateExportPlan(plan);
       if (planError) {
         return { ok: false, code: null, cancelled: false, error: planError };
@@ -506,6 +537,17 @@ export function registerIpc(): void {
 
   ipcMain.handle('app:platform', async () => process.platform);
   ipcMain.handle('app:version', async () => app.getVersion());
+
+  ipcMain.handle('app:nativeTheme', async () =>
+    nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  );
+
+  nativeTheme.on('updated', () => {
+    const resolved = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+    BrowserWindow.getAllWindows().forEach((w) =>
+      w.webContents.send('nativeTheme:updated', resolved)
+    );
+  });
 }
 
 const MEDIA_MIME: Record<string, string> = {
