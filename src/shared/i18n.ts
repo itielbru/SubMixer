@@ -193,6 +193,9 @@ export const translations = {
     export_double_apply_body:
       'מוחל גם offset/קצב גלובלי וגם שינויים בקובץ הכתוביות. התזמון הסופי משלב את שניהם. להמשיך?',
     export_continue: 'המשך ייצוא',
+    export_overwrite_title: 'קובץ קיים',
+    export_overwrite_body: 'קובץ היעד כבר קיים בנתיב זה. האם להחליף אותו?',
+    export_overwrite_confirm: 'החלף',
     tools_menu_btn: 'כלים…',
     tools_cat_text: 'עריכת טקסט',
     tools_cat_timing: 'תזמון המוני',
@@ -528,6 +531,9 @@ export const translations = {
     export_double_apply_body:
       'Both global offset/rate and file cue edits apply. Final timing combines both. Continue?',
     export_continue: 'Continue export',
+    export_overwrite_title: 'File already exists',
+    export_overwrite_body: 'The output file already exists at this path. Replace it?',
+    export_overwrite_confirm: 'Replace',
     tools_menu_btn: 'Tools…',
     tools_cat_text: 'Text editing',
     tools_cat_timing: 'Bulk timing',

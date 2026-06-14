@@ -543,6 +543,8 @@ export function registerIpc(): void {
   ipcMain.handle('history:list', async () => (await getSettings()).history);
   ipcMain.handle('history:clear', async () => clearHistory());
 
+  ipcMain.handle('fs:exists', async (_e, p: string) => fs.stat(p).then(() => true).catch(() => false));
+
   ipcMain.handle('shell:openPath', async (_e, p: string) => shell.openPath(p));
   ipcMain.handle('shell:showItem', async (_e, p: string) => shell.showItemInFolder(p));
   ipcMain.handle('shell:userData', async () => userDataPath());

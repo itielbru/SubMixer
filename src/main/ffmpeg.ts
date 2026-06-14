@@ -577,6 +577,18 @@ export function validateExportPlan(plan: ExportPlan): string | null {
 }
 
 function parseFfmpegError(stderr: string): string {
+  // Check common patterns directly on full stderr first for precise matching
+  if (/no space left on device/i.test(stderr))
+    return 'Export failed — disk is full. Free up space and try again.';
+  if (/permission denied/i.test(stderr))
+    return 'Export failed — permission denied. Check that the destination folder is writable.';
+  if (/codec not currently supported in container/i.test(stderr))
+    return 'Export failed — one or more tracks use a codec not supported by the chosen container. Switch to MKV or remove the incompatible track.';
+  if (/moov atom not found|invalid data found when processing input|end of file/i.test(stderr))
+    return 'Export failed — the source file appears to be corrupt or incomplete.';
+  if (/output file.*already exists|overwriting/i.test(stderr))
+    return 'Export failed — output file already exists and overwriting was refused.';
+
   const lines = stderr
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -586,9 +598,8 @@ function parseFfmpegError(stderr: string): string {
   );
   if (errLines.length > 0) {
     const joined = errLines.slice(-2).join(' · ');
-    if (/invalid utf-8|sub_charenc/i.test(joined)) {
+    if (/invalid utf-8|sub_charenc/i.test(joined))
       return 'Subtitle encoding error — the external subtitle file could not be read. Try re-adding it or save it as UTF-8 SRT.';
-    }
     return joined;
   }
   return 'FFmpeg export failed — open the FFmpeg command log for details.';

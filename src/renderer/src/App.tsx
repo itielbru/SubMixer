@@ -144,7 +144,7 @@ function AppContent({
   const [showAdjustAll, setShowAdjustAll] = useState(false);
   const [showFixErrors, setShowFixErrors] = useState(false);
   const [showFindReplace, setShowFindReplace] = useState(false);
-  const [exportConfirm, setExportConfirm] = useState<'mux' | { kind: 'srt'; sub: ExternalSub } | null>(
+  const [exportConfirm, setExportConfirm] = useState<'mux' | 'overwrite' | { kind: 'srt'; sub: ExternalSub } | null>(
     null
   );
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
@@ -933,6 +933,15 @@ function AppContent({
   };
 
   const handleExport = async (): Promise<void> => {
+    if (!file || !title.trim() || !destFolder.trim()) {
+      await doMuxExport(); // let doMuxExport show the specific validation toast
+      return;
+    }
+    const exists = await window.api.fs.exists(outPath);
+    if (exists) {
+      setExportConfirm('overwrite');
+      return;
+    }
     if (anyExtSubDoubleApply()) {
       setExportConfirm('mux');
       return;
@@ -1370,11 +1379,12 @@ function AppContent({
 
       {exportConfirm && (
         <ExportConfirmModal
+          kind={exportConfirm === 'overwrite' ? 'overwrite' : 'double-apply'}
           onClose={() => setExportConfirm(null)}
           onConfirm={() => {
             const pending = exportConfirm;
             setExportConfirm(null);
-            if (pending === 'mux') void doMuxExport();
+            if (pending === 'mux' || pending === 'overwrite') void doMuxExport();
             else if (pending && typeof pending === 'object') void doExportSrt(pending.sub);
           }}
         />

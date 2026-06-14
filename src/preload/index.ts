@@ -123,6 +123,10 @@ const api = {
     clear: (): Promise<AppSettings> => ipcRenderer.invoke('history:clear'),
   },
 
+  fs: {
+    exists: (p: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', p),
+  },
+
   shellOps: {
     openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:openPath', p),
     showItem: (p: string): Promise<void> => ipcRenderer.invoke('shell:showItem', p),
