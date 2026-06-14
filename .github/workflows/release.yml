@@ -1,7 +1,8 @@
 name: Release
 
-# Publish a signed (if a cert is configured) Windows build to GitHub Releases
-# whenever a version tag is pushed, e.g. `git tag v1.1.0 && git push --tags`.
+# Two-phase release:
+#   workflow_dispatch → creates the version tag → triggers push:tags → builds installer
+#   push:tags (v*)    → full build + publish to GitHub Releases
 on:
   push:
     tags:
@@ -9,11 +10,32 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # required to create/upload the GitHub Release
+  contents: write
 
 jobs:
+  # Phase 1: create the git tag (workflow_dispatch only)
+  create-tag:
+    name: Create version tag
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Push version tag
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "v$VERSION" -m "Release v$VERSION" 2>/dev/null || echo "tag v$VERSION already exists"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "v$VERSION" 2>/dev/null || echo "tag already on remote"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Phase 2: build + publish (tag push only)
   release:
     name: Build and publish (Windows)
+    if: github.event_name == 'push'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -43,9 +65,6 @@ jobs:
       - name: Package and publish to GitHub Releases
         shell: pwsh
         run: |
-          # Enable code signing only when a certificate secret is actually set.
-          # An empty CSC_LINK makes electron-builder fail trying to resolve it as
-          # a file path, so we set the signing vars conditionally.
           if ($env:CSC_LINK_SECRET) {
             $env:CSC_LINK = $env:CSC_LINK_SECRET
             $env:CSC_KEY_PASSWORD = $env:CSC_KEY_PASSWORD_SECRET
@@ -53,7 +72,5 @@ jobs:
           npx electron-builder --win nsis portable --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Populate these repo secrets to produce signed builds; left unset,
-          # builds are unsigned (no signing is attempted).
           CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
