@@ -52,6 +52,7 @@ import { t } from '@shared/i18n';
 import type { AgentDebugPayload } from '@shared/agent-debug';
 import { PREVIEW_QUICK_SECONDS, type PreviewProgress } from '@shared/preview';
 import log from './logger';
+import { downloadUpdate, installUpdate } from './updater';
 
 function fmtSize(bytes: number): string {
   if (!bytes) return '—';
@@ -95,6 +96,8 @@ async function prepareExternalSubs(
 ): Promise<string[]> {
   const processed: string[] = [];
   for (const s of externalSubs) {
+    assertString(s?.path, 'externalSub.path');
+    assertAbsPath(s.path, 'externalSub.path');
     const out = await writeTransformedSrt(s.path, {
       offset: s.offset,
       speed: s.speed,
@@ -562,6 +565,10 @@ export function registerIpc(): void {
       w.webContents.send('nativeTheme:updated', resolved)
     );
   });
+
+  // ── Auto-update controls ───────────────────────────────────────────────────
+  ipcMain.handle('update:download', async () => downloadUpdate());
+  ipcMain.handle('update:install', async () => installUpdate());
 }
 
 const MEDIA_MIME: Record<string, string> = {

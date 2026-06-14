@@ -152,6 +152,11 @@ function AppContent({
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [update, setUpdate] = useState<{
+    status: 'available' | 'downloading' | 'ready';
+    version: string;
+    percent?: number;
+  } | null>(null);
 
   // ── Unified undo/redo: track toggles + cue edits, in one chronological stack ─
   type HistoryEntry =
@@ -249,6 +254,22 @@ function AppContent({
   useEffect(() => {
     return window.api.peaks.onProgress((pct) => setPeaksPct(pct));
   }, []);
+
+  // Auto-update lifecycle → non-blocking banner (packaged builds only).
+  useEffect(() => {
+    const offs = [
+      window.api.update.onAvailable((version) => setUpdate({ status: 'available', version })),
+      window.api.update.onProgress((percent) =>
+        setUpdate((u) => (u ? { ...u, status: 'downloading', percent } : u)),
+      ),
+      window.api.update.onDownloaded((version) => setUpdate({ status: 'ready', version })),
+      window.api.update.onError((msg) => {
+        setUpdate(null);
+        toast(msg || t('update_error'), 'err');
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, [toast, t]);
 
   useEffect(() => {
     if (!activeSubId) return;
@@ -1103,6 +1124,47 @@ function AppContent({
           <button className="btn compact" type="button" onClick={() => window.api.ffmpeg.openInstallPage()}>
             {t('download')}
           </button>
+        </div>
+      )}
+
+      {update && (
+        <div className="update-banner">
+          {update.status === 'available' && (
+            <>
+              <span>{t('update_available').replace('{v}', update.version)}</span>
+              <button
+                className="btn compact"
+                type="button"
+                onClick={() => {
+                  setUpdate({ ...update, status: 'downloading', percent: 0 });
+                  void window.api.update.download();
+                }}
+              >
+                {t('update_download')}
+              </button>
+              <button className="btn compact ghost" type="button" onClick={() => setUpdate(null)}>
+                {t('later')}
+              </button>
+            </>
+          )}
+          {update.status === 'downloading' && (
+            <span>{t('update_downloading').replace('{p}', String(update.percent ?? 0))}</span>
+          )}
+          {update.status === 'ready' && (
+            <>
+              <span>{t('update_ready').replace('{v}', update.version)}</span>
+              <button
+                className="btn compact"
+                type="button"
+                onClick={() => void window.api.update.install()}
+              >
+                {t('update_restart')}
+              </button>
+              <button className="btn compact ghost" type="button" onClick={() => setUpdate(null)}>
+                {t('later')}
+              </button>
+            </>
+          )}
         </div>
       )}
 

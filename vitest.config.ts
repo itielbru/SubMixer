@@ -21,6 +21,7 @@ export default defineConfig({
         'src/renderer/src/lib/**',
         'src/main/srt.ts',
         'src/main/peaks-cache.ts',
+        'src/main/maintenance.ts',
       ],
       reporter: ['text', 'html'],
     },

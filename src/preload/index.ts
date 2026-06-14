@@ -152,6 +152,31 @@ const api = {
     },
   },
 
+  update: {
+    download: (): Promise<void> => ipcRenderer.invoke('update:download'),
+    install: (): Promise<void> => ipcRenderer.invoke('update:install'),
+    onAvailable: (cb: (version: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, v: string) => cb(v);
+      ipcRenderer.on('update:available', handler);
+      return () => ipcRenderer.removeListener('update:available', handler);
+    },
+    onProgress: (cb: (percent: number) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, p: number) => cb(p);
+      ipcRenderer.on('update:progress', handler);
+      return () => ipcRenderer.removeListener('update:progress', handler);
+    },
+    onDownloaded: (cb: (version: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, v: string) => cb(v);
+      ipcRenderer.on('update:downloaded', handler);
+      return () => ipcRenderer.removeListener('update:downloaded', handler);
+    },
+    onError: (cb: (message: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, m: string) => cb(m);
+      ipcRenderer.on('update:error', handler);
+      return () => ipcRenderer.removeListener('update:error', handler);
+    },
+  },
+
   debug: {
     log: (payload: import('../shared/agent-debug').AgentDebugPayload): Promise<void> =>
       ipcRenderer.invoke('debug:agentLog', payload),

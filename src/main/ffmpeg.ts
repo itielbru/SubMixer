@@ -14,6 +14,12 @@ import type {
 
 const execFileAsync = promisify(execFile);
 
+// Operation timeouts. A malformed or unreadable file (or a disconnected network
+// drive) must never hang an operation forever.
+const PROBE_TIMEOUT_MS = 60_000;
+const PREVIEW_TIMEOUT_MS = 180_000;
+const PEAKS_TIMEOUT_MS = 120_000;
+
 let cachedStatus: FFmpegStatus | null = null;
 
 // ── Binary discovery ────────────────────────────────────────────────────────
@@ -271,10 +277,23 @@ export async function probe(filePath: string): Promise<MediaFile> {
     '-show_streams',
     filePath,
   ];
-  const { stdout } = await execFileAsync(status.ffprobePath, args, {
-    windowsHide: true,
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  let stdout: string;
+  try {
+    ({ stdout } = await execFileAsync(status.ffprobePath, args, {
+      windowsHide: true,
+      maxBuffer: 32 * 1024 * 1024,
+      timeout: PROBE_TIMEOUT_MS,
+    }));
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
+    if (e.killed || e.signal === 'SIGTERM') {
+      throw new Error(
+        `ffprobe timed out after ${Math.round(PROBE_TIMEOUT_MS / 1000)}s — the file may be ` +
+          `corrupt, unreadable, or on a slow/disconnected drive.`,
+      );
+    }
+    throw err;
+  }
   const out: FFProbeOutput = JSON.parse(stdout);
 
   let firstVideoSeen = false;
@@ -373,7 +392,7 @@ export async function extractAudioPreview(
     const timer = setTimeout(() => {
       try { child.kill('SIGINT'); } catch { /* */ }
       rejectP(new Error('FFmpeg preview timed out after 3 minutes'));
-    }, 180_000);
+    }, PREVIEW_TIMEOUT_MS);
 
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString();
@@ -452,7 +471,7 @@ export async function extractPeaks(
     const timer = setTimeout(() => {
       try { child.kill('SIGINT'); } catch { /* */ }
       rejectP(new Error('FFmpeg peaks extraction timed out after 2 minutes'));
-    }, 120_000);
+    }, PEAKS_TIMEOUT_MS);
 
     const ensureCapacity = (need: number): void => {
       if (need <= min.length) return;
@@ -576,7 +595,7 @@ export function validateExportPlan(plan: ExportPlan): string | null {
   return null;
 }
 
-function parseFfmpegError(stderr: string): string {
+export function parseFfmpegError(stderr: string): string {
   // Check common patterns directly on full stderr first for precise matching
   if (/no space left on device/i.test(stderr))
     return 'Export failed — disk is full. Free up space and try again.';
