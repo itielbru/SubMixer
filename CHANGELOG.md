@@ -6,6 +6,45 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-14
+
+### Added
+
+- **Batch export queue**: queue multiple export jobs and run them sequentially; dedicated BatchQueueModal with per-job progress and error display.
+- **System desktop notifications**: a native notification fires when a single export or batch queue completes (permission requested once).
+- **Re-export from history**: each successful history entry stores the original plan and surfaces a "Re-export" button to repeat the export without reloading the file.
+- **Drag-and-drop subtitle files**: drag SRT/VTT/ASS files directly onto the subtitle drawer to add them; drop target highlights on hover.
+- **Overrun warning**: cues that extend past the video's end time are flagged in the cue editor.
+- **Peaks cache TTL eviction**: waveform cache entries older than 30 days are automatically removed on startup.
+- **E2E smoke tests**: Playwright suite verifies the Electron app launches, the root mounts, the empty-state panel is visible, and the export button starts disabled.
+- **Unit tests**: evictByAge (maintenance), cue-warnings overrun case.
+- `data-testid` attributes on key interactive elements for test selectors.
+
+### Changed
+
+- **Electron 34 → 42** (Chromium 130+, Node 22+; updated `electron-builder` to v26).
+- **electron-vite 2.3 → 5.0** (isolated build mode, Vite 7 internals).
+- **Self-hosted fonts**: Google Fonts replaced with locally bundled woff2 files (`setup:fonts` script). CSP `style-src` and `font-src` no longer reference external domains.
+- **Auto-update**: shows an update-available notification before downloading (was: silent background download).
+- **System theme**: "System" option in Settings syncs with OS dark/light mode via Electron's `nativeTheme`.
+
+### Improved
+
+- **Modal accessibility**: all modals wrapped in WAI-ARIA `role="dialog"` + `aria-modal` with a Tab/Shift-Tab focus trap, Escape to close, and auto-focus on the first focusable element.
+- **ARIA for lists and grids**: TracksList uses `role="list"` / `role="listitem"`; CueListView uses `role="grid"` with `aria-selected` and `aria-live="polite"` for screen readers.
+- **Preview retry**: failed audio extraction shows a Retry button instead of a permanent error state.
+- **Peaks IPC rate limit**: concurrent `peaks:get` calls are rejected early rather than spawning duplicate ffmpeg processes.
+- **FFmpeg spawn timeouts**: preview extraction times out after 180 s, peaks after 120 s, to prevent hangs on corrupt or truncated media.
+- **IPC input validation**: all sensitive IPC handlers assert string types and absolute paths before use.
+- **Stronger peaks cache key**: first 64 KB of file content is now hashed alongside path + size + mtime, eliminating stale waveform risk when a file is replaced in-place.
+- **CI**: Windows runner added (typecheck + test on `windows-latest`); separate E2E job on `windows-latest` after the build step.
+
+### Fixed
+
+- Export history entries now store original subtitle file paths (not ephemeral temp SRT paths) plus `durationSec`, making re-export reliable.
+
+## [1.0.0] - 2026-06-13
+
 ### Added
 
 - **Quality tooling:** ESLint (flat config) + Prettier + EditorConfig, with
