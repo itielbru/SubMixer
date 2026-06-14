@@ -20,8 +20,10 @@ jobs:
 
       - name: Read version
         id: ver
-        shell: bash
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+        shell: pwsh
+        run: |
+          $v = node -e "process.stdout.write(require('./package.json').version)"
+          "version=$v" | Out-File -Append $env:GITHUB_OUTPUT -Encoding utf8
 
       - name: Create and push git tag
         shell: bash
