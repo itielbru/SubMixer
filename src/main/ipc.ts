@@ -92,6 +92,29 @@ async function previewCacheId(filePath: string, trackIndex: number): Promise<str
   return h.digest('hex');
 }
 
+/**
+ * Best-effort guard against starting an export that cannot possibly fit.
+ * Returns an error message if the destination volume has clearly insufficient
+ * free space, or null to proceed (also null if the check can't be performed).
+ */
+async function checkDiskSpace(inputFile: string, outputPath: string): Promise<string | null> {
+  try {
+    const inStat = await fs.stat(inputFile);
+    // A remux is ~input-sized; reserve the input size + 64 MB headroom.
+    const needed = inStat.size + 64 * 1024 * 1024;
+    const vfs = await fs.statfs(path.dirname(outputPath));
+    const free = vfs.bavail * vfs.bsize;
+    if (free < needed) {
+      return `Not enough free space to export — need about ${fmtSize(needed)} but only ${fmtSize(
+        free,
+      )} is available on the destination drive.`;
+    }
+    return null;
+  } catch {
+    return null; // can't determine — don't block the export
+  }
+}
+
 async function prepareExternalSubs(
   externalSubs: { path: string; offset: number; speed: number; encoding?: string }[],
 ): Promise<string[]> {
@@ -482,6 +505,13 @@ export function registerIpc(): void {
         const planError = validateExportPlan(plan);
         if (planError) {
           return { ok: false, code: null, cancelled: false, error: planError };
+        }
+
+        // Pre-flight: refuse to start if the destination clearly lacks room.
+        // A mux is roughly input-sized; require that plus a small headroom.
+        const spaceError = await checkDiskSpace(plan.inputFile, plan.outputPath);
+        if (spaceError) {
+          return { ok: false, code: null, cancelled: false, error: spaceError };
         }
 
         // Normalize external subs to temp SRT (handles VTT/ASS + offset/speed + encoding)
