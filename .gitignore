@@ -25,3 +25,6 @@ src_backup/
 *.pem
 *.pfx
 *.p12
+
+# Test coverage output
+coverage/
