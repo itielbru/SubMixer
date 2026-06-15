@@ -40,6 +40,7 @@ import { usePreview } from './hooks/usePreview';
 import { joinPath } from './lib/path';
 import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
+import { useExportStore } from './state/exportStore';
 
 interface LogLine {
   time: string;
@@ -95,16 +96,26 @@ function AppContent({
   const [editedSubIds, setEditedSubIds] = useState<Set<string>>(() => new Set());
   const cues: SrtCue[] = activeSubId ? (cuesBySubId[activeSubId] ?? []) : [];
 
-  const [contentType, setContentType] = useState<'movie' | 'series'>('movie');
-  const [title, setTitle] = useState('');
-  const [year, setYear] = useState('');
-  const [season, setSeason] = useState('01');
-  const [episode, setEpisode] = useState('01');
-  const [container, setContainer] = useState('MKV');
-  const [destFolder, setDestFolder] = useState('');
+  // ── Export metadata + batch queue (Zustand store) ────────────────────────
+  const contentType = useExportStore((s) => s.contentType);
+  const setContentType = useExportStore((s) => s.setContentType);
+  const title = useExportStore((s) => s.title);
+  const setTitle = useExportStore((s) => s.setTitle);
+  const year = useExportStore((s) => s.year);
+  const setYear = useExportStore((s) => s.setYear);
+  const season = useExportStore((s) => s.season);
+  const setSeason = useExportStore((s) => s.setSeason);
+  const episode = useExportStore((s) => s.episode);
+  const setEpisode = useExportStore((s) => s.setEpisode);
+  const container = useExportStore((s) => s.container);
+  const setContainer = useExportStore((s) => s.setContainer);
+  const destFolder = useExportStore((s) => s.destFolder);
+  const setDestFolder = useExportStore((s) => s.setDestFolder);
+  const overrideName = useExportStore((s) => s.overrideName);
+  const setOverrideName = useExportStore((s) => s.setOverrideName);
+  const customName = useExportStore((s) => s.customName);
+  const setCustomName = useExportStore((s) => s.setCustomName);
   const destInited = useRef(false);
-  const [overrideName, setOverrideName] = useState(false);
-  const [customName, setCustomName] = useState('');
 
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
@@ -160,7 +171,11 @@ function AppContent({
     size: number;
     mtimeMs: number;
   } | null>(null);
-  const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
+  const batchQueue = useExportStore((s) => s.batchQueue);
+  const addBatchItems = useExportStore((s) => s.addBatchItems);
+  const updateBatchItem = useExportStore((s) => s.updateBatchItem);
+  const removeBatchItem = useExportStore((s) => s.removeBatchItem);
+  const clearDoneBatch = useExportStore((s) => s.clearDoneBatch);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
@@ -318,7 +333,7 @@ function AppContent({
       setDestFolder(settings.defaultDestFolder);
       destInited.current = true;
     }
-  }, [settings.defaultDestFolder]);
+  }, [settings.defaultDestFolder, setDestFolder]);
 
   useEffect(() => {
     return window.api.peaks.onProgress((pct) => setPeaksPct(pct));
@@ -1243,7 +1258,7 @@ function AppContent({
       extSubs: extForRun,
       status: 'pending',
     };
-    setBatchQueue((q) => [...q, item]);
+    addBatchItems([item]);
     toast(`${t('batch_added')}: ${outName}`, 'ok');
   };
 
@@ -1357,7 +1372,7 @@ function AppContent({
       });
     }
     if (newItems.length > 0) {
-      setBatchQueue((q) => [...q, ...newItems]);
+      addBatchItems(newItems);
       toast(`${t('batch_added')}: ${newItems.length}`, 'ok');
     }
   };
@@ -1366,13 +1381,10 @@ function AppContent({
     const pending = batchQueue.filter((x) => x.status === 'pending');
     await runBatch(pending, (idx, ok, cancelled, error) => {
       const item = pending[idx];
-      setBatchQueue((q) =>
-        q.map((x) =>
-          x.id === item.id
-            ? { ...x, status: ok ? 'done' : cancelled ? 'pending' : 'failed', error }
-            : x,
-        ),
-      );
+      updateBatchItem(item.id, {
+        status: ok ? 'done' : cancelled ? 'pending' : 'failed',
+        error,
+      });
     });
     await refreshHistory();
     showNotification('SubMixer', t('notify_batch_done'));
@@ -1903,15 +1915,13 @@ function AppContent({
           items={batchQueue}
           exporting={exporting}
           onClose={() => setShowBatchQueue(false)}
-          onRemove={(id) => setBatchQueue((q) => q.filter((x) => x.id !== id))}
+          onRemove={(id) => removeBatchItem(id)}
           onAddMultiple={() => void addMultipleVideosToBatch()}
           onRunAll={() => {
             setShowBatchQueue(false);
             void runBatchQueue();
           }}
-          onClearDone={() =>
-            setBatchQueue((q) => q.filter((x) => x.status === 'pending' || x.status === 'running'))
-          }
+          onClearDone={() => clearDoneBatch()}
         />
       )}
 
