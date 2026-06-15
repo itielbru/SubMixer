@@ -4,10 +4,8 @@ import type {
   CueWarningThresholds,
   ExportPlan,
   ExternalSub,
-  MediaFile,
   ProjectData,
   SrtCue,
-  Track,
 } from '@shared/types';
 import { fileTimeFromMediaTime, mediaTimeForCueStart } from '@shared/cue-sync';
 import { TopBar } from './components/TopBar';
@@ -42,15 +40,12 @@ import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
 import { useExportStore } from './state/exportStore';
 import { useAppEnvStore } from './state/appEnvStore';
+import { useDocStore } from './state/docStore';
 
 interface LogLine {
   time: string;
   level: 'info' | 'ok' | 'warn' | 'err';
   msg: string;
-}
-
-function cloneTracks(t: Track[]): Track[] {
-  return t.map((x) => ({ ...x }));
 }
 
 function AppContent({
@@ -94,12 +89,22 @@ function AppContent({
   const ffmpegOk = useAppEnvStore((s) => s.ffmpegOk);
   const setFfmpegOk = useAppEnvStore((s) => s.setFfmpegOk);
 
-  const [file, setFile] = useState<MediaFile | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [extSubs, setExtSubs] = useState<ExternalSub[]>([]);
-  const [activeSubId, setActiveSubId] = useState<string | null>(null);
-  const [cuesBySubId, setCuesBySubId] = useState<Record<string, SrtCue[]>>({});
-  const [editedSubIds, setEditedSubIds] = useState<Set<string>>(() => new Set());
+  // ── Document state (Zustand docStore) ────────────────────────────────────
+  const file = useDocStore((s) => s.file);
+  const setFile = useDocStore((s) => s.setFile);
+  const tracks = useDocStore((s) => s.tracks);
+  const setTracks = useDocStore((s) => s.setTracks);
+  const extSubs = useDocStore((s) => s.extSubs);
+  const setExtSubs = useDocStore((s) => s.setExtSubs);
+  const activeSubId = useDocStore((s) => s.activeSubId);
+  const setActiveSubId = useDocStore((s) => s.setActiveSubId);
+  const cuesBySubId = useDocStore((s) => s.cuesBySubId);
+  const setCuesBySubId = useDocStore((s) => s.setCuesBySubId);
+  const editedSubIds = useDocStore((s) => s.editedSubIds);
+  const setEditedSubIds = useDocStore((s) => s.setEditedSubIds);
+  const pushUndo = useDocStore((s) => s.pushUndo);
+  const snapshotCues = useDocStore((s) => s.snapshotCues);
+  const { undo, redo } = useDocStore((s) => ({ undo: s.undo, redo: s.redo }));
   const cues: SrtCue[] = activeSubId ? (cuesBySubId[activeSubId] ?? []) : [];
 
   // ── Export metadata + batch queue (Zustand store) ────────────────────────
@@ -195,104 +200,7 @@ function AppContent({
     percent?: number;
   } | null>(null);
 
-  // ── Unified undo/redo: track toggles + cue edits, in one chronological stack ─
-  type HistoryEntry =
-    | { kind: 'tracks'; tracks: Track[] }
-    | { kind: 'cues'; subId: string; cues: SrtCue[] };
-  const HISTORY_LIMIT = 100;
-  const undoStack = useRef<HistoryEntry[]>([]);
-  const redoStack = useRef<HistoryEntry[]>([]);
-  // Coalesces a run of identical edits (e.g. dragging one cue) into one entry.
-  const coalesceKey = useRef<string | null>(null);
-
-  // Fresh-state mirrors so the global key handler (stable deps) reads current state.
-  const tracksRef = useRef(tracks);
-  tracksRef.current = tracks;
-  const cuesRef = useRef(cuesBySubId);
-  cuesRef.current = cuesBySubId;
-
-  // Refs for project save (stable closure without re-subscribing menu listeners)
-  const fileRef = useRef(file);
-  fileRef.current = file;
-  const extSubsRef = useRef(extSubs);
-  extSubsRef.current = extSubs;
-  const activeSubIdRef = useRef(activeSubId);
-  activeSubIdRef.current = activeSubId;
-  const metaRef = useRef({
-    contentType,
-    title,
-    year,
-    season,
-    episode,
-    container,
-    overrideName,
-    customName,
-  });
-  metaRef.current = {
-    contentType,
-    title,
-    year,
-    season,
-    episode,
-    container,
-    overrideName,
-    customName,
-  };
-  const editedSubIdsRef = useRef(editedSubIds);
-  editedSubIdsRef.current = editedSubIds;
-
-  const pushUndo = useCallback(() => {
-    undoStack.current.push({ kind: 'tracks', tracks: cloneTracks(tracksRef.current) });
-    if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.shift();
-    redoStack.current = [];
-    coalesceKey.current = null;
-  }, []);
-
-  // Snapshot the active sub's cues *before* a mutation. Pass a `key` to coalesce
-  // consecutive identical edits; pass null for discrete one-shot operations.
-  const snapshotCues = useCallback((subId: string, key: string | null) => {
-    if (key && coalesceKey.current === key) return;
-    const current = cuesRef.current[subId];
-    if (!current) return;
-    undoStack.current.push({ kind: 'cues', subId, cues: current });
-    if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.shift();
-    redoStack.current = [];
-    coalesceKey.current = key;
-  }, []);
-
-  const restoreEntry = useCallback((entry: HistoryEntry): HistoryEntry | null => {
-    if (entry.kind === 'tracks') {
-      const inverse: HistoryEntry = { kind: 'tracks', tracks: cloneTracks(tracksRef.current) };
-      setTracks(entry.tracks);
-      return inverse;
-    }
-    const current = cuesRef.current[entry.subId];
-    const inverse: HistoryEntry | null = current
-      ? { kind: 'cues', subId: entry.subId, cues: current }
-      : null;
-    setActiveSubId(entry.subId);
-    setCuesBySubId((m) => ({ ...m, [entry.subId]: entry.cues }));
-    setExtSubs((subs) =>
-      subs.map((s) => (s.id === entry.subId ? { ...s, cues: entry.cues.length } : s)),
-    );
-    return inverse;
-  }, []);
-
-  const undo = useCallback(() => {
-    const entry = undoStack.current.pop();
-    if (!entry) return;
-    const inverse = restoreEntry(entry);
-    if (inverse) redoStack.current.push(inverse);
-    coalesceKey.current = null;
-  }, [restoreEntry]);
-
-  const redo = useCallback(() => {
-    const entry = redoStack.current.pop();
-    if (!entry) return;
-    const inverse = restoreEntry(entry);
-    if (inverse) undoStack.current.push(inverse);
-    coalesceKey.current = null;
-  }, [restoreEntry]);
+  // ── Undo/redo are now in docStore (undo/redo/pushUndo/snapshotCues above) ──
 
   // ── bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -372,7 +280,7 @@ function AppContent({
         setCuesBySubId((m) => ({ ...m, [activeSubId]: [] }));
       }
     });
-  }, [activeSubId, extSubs, cuesBySubId]);
+  }, [activeSubId, extSubs, cuesBySubId, setCuesBySubId]);
 
   useEffect(() => {
     if (!file || previewAudioId === null) {
@@ -427,7 +335,7 @@ function AppContent({
         return n;
       });
     },
-    [activeSubId, snapshotCues],
+    [activeSubId, snapshotCues, setCuesBySubId, setEditedSubIds],
   );
 
   const deleteCue = useCallback(
@@ -451,7 +359,7 @@ function AppContent({
         subs.map((s) => (s.id === activeSubId ? { ...s, cues: Math.max(0, s.cues - 1) } : s)),
       );
     },
-    [activeSubId, snapshotCues],
+    [activeSubId, snapshotCues, setCuesBySubId, setEditedSubIds, setExtSubs],
   );
 
   const insertCue = useCallback(
@@ -478,7 +386,7 @@ function AppContent({
       );
       return pos;
     },
-    [activeSubId, cuesBySubId, snapshotCues],
+    [activeSubId, cuesBySubId, snapshotCues, setCuesBySubId, setEditedSubIds, setExtSubs],
   );
 
   const markSubEdited = useCallback(() => {
@@ -489,7 +397,7 @@ function AppContent({
       n.add(activeSubId);
       return n;
     });
-  }, [activeSubId]);
+  }, [activeSubId, setEditedSubIds]);
 
   const shiftCues = useCallback(
     (deltaSec: number, indices: number[]): void => {
@@ -512,7 +420,7 @@ function AppContent({
       });
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues],
+    [activeSubId, markSubEdited, snapshotCues, setCuesBySubId],
   );
 
   const shiftAllCues = useCallback(
@@ -534,7 +442,7 @@ function AppContent({
       });
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues],
+    [activeSubId, markSubEdited, snapshotCues, setCuesBySubId],
   );
 
   const setCuesForActiveSub = useCallback(
@@ -547,7 +455,7 @@ function AppContent({
       );
       markSubEdited();
     },
-    [activeSubId, markSubEdited, snapshotCues],
+    [activeSubId, markSubEdited, snapshotCues, setCuesBySubId, setExtSubs],
   );
 
   const splitCue = useCallback(
@@ -747,7 +655,7 @@ function AppContent({
       }
       if (added) setCenterTab('preview');
     },
-    [t, toast],
+    [t, toast, setExtSubs, setActiveSubId, setCuesBySubId],
   );
 
   const pickSrtFiles = async () => {
@@ -814,23 +722,21 @@ function AppContent({
   };
 
   const buildProjectData = (): ProjectData | null => {
-    const f = fileRef.current;
+    const ds = useDocStore.getState();
+    const f = ds.file;
     if (!f) return null;
-    const m = metaRef.current;
-    const subs = extSubsRef.current;
-    const cuesMap = cuesRef.current;
-    const edited = editedSubIdsRef.current;
-    const activePath = (() => {
-      const id = activeSubIdRef.current;
-      if (!id) return null;
-      const s = subs.find((x) => x.id === id);
-      return s?.path ?? null;
-    })();
+    const subs = ds.extSubs;
+    const cuesMap = ds.cuesBySubId;
+    const edited = ds.editedSubIds;
+    const activeId = ds.activeSubId;
+    const activePath = activeId ? (subs.find((x) => x.id === activeId)?.path ?? null) : null;
+    const { contentType, title, year, season, episode, container, overrideName, customName } =
+      useExportStore.getState();
     return {
       schemaVersion: 1,
       savedAt: new Date().toISOString(),
       videoPath: f.path,
-      trackOverrides: tracksRef.current.map(({ id, keep, def, forced }) => ({
+      trackOverrides: ds.tracks.map(({ id, keep, def, forced }) => ({
         id,
         keep,
         def,
@@ -850,14 +756,14 @@ function AppContent({
       })),
       activeSubPath: activePath,
       metadata: {
-        contentType: m.contentType,
-        title: m.title,
-        year: m.year,
-        season: m.season,
-        episode: m.episode,
-        container: m.container,
-        overrideName: m.overrideName,
-        customName: m.customName,
+        contentType,
+        title,
+        year,
+        season,
+        episode,
+        container,
+        overrideName,
+        customName,
       },
     };
   };
