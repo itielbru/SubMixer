@@ -255,7 +255,8 @@ export const translations = {
     tl_center: 'מרכז על מיקום הניגון',
     tl_follow_tip: 'עקוב אחר הניגון אוטומטית',
     tl_help:
-      'גרור cue להזזה · ידיות לשינוי תזמון · Ctrl+גלגלת לזום · Shift+גרירה לפאן · Delete למחיקה',
+      'גרור cue להזזה · ידיות לשינוי תזמון · Ctrl+גלגלת לזום · Shift+גרירה לפאן · Delete למחיקה · ←/→ הזזה · Shift+←/→ מתיחה',
+    tl_aria_label: 'ציר זמן כתוביות',
     tl_peaks_loading: 'מכין גלי קול…',
     tl_peaks_hint: 'לחץ Play כדי להכין גלי קול',
 
@@ -658,7 +659,8 @@ export const translations = {
     tl_center: 'Center on playhead',
     tl_follow_tip: 'Auto-follow playhead',
     tl_help:
-      'Drag a cue to move · handles to retime · Ctrl+Wheel zoom · Shift+drag pan · Delete to remove',
+      'Drag a cue to move · handles to retime · Ctrl+Wheel zoom · Shift+drag pan · Delete to remove · ←/→ nudge · Shift+←/→ extend',
+    tl_aria_label: 'Subtitle timeline',
     tl_peaks_loading: 'Preparing waveform…',
     tl_peaks_hint: 'Press Play to generate waveform',
 

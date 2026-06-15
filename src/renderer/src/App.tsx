@@ -156,6 +156,10 @@ function AppContent({
   const [exportConfirm, setExportConfirm] = useState<
     'mux' | 'overwrite' | { kind: 'srt'; sub: ExternalSub } | null
   >(null);
+  const [overwriteFileInfo, setOverwriteFileInfo] = useState<{
+    size: number;
+    mtimeMs: number;
+  } | null>(null);
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -1187,6 +1191,8 @@ function AppContent({
     }
     const exists = await window.api.fs.exists(outPath);
     if (exists) {
+      const info = await window.api.fs.stat(outPath);
+      setOverwriteFileInfo(info);
       setExportConfirm('overwrite');
       return;
     }
@@ -1739,10 +1745,15 @@ function AppContent({
       {exportConfirm && (
         <ExportConfirmModal
           kind={exportConfirm === 'overwrite' ? 'overwrite' : 'double-apply'}
-          onClose={() => setExportConfirm(null)}
+          fileInfo={exportConfirm === 'overwrite' ? overwriteFileInfo : undefined}
+          onClose={() => {
+            setExportConfirm(null);
+            setOverwriteFileInfo(null);
+          }}
           onConfirm={() => {
             const pending = exportConfirm;
             setExportConfirm(null);
+            setOverwriteFileInfo(null);
             if (pending === 'mux' || pending === 'overwrite') void doMuxExport();
             else if (pending && typeof pending === 'object') void doExportSrt(pending.sub);
           }}

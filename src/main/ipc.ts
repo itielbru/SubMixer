@@ -644,6 +644,15 @@ export function registerIpc(): void {
       .catch(() => false),
   );
 
+  ipcMain.handle('fs:stat', async (_e, p: string) => {
+    try {
+      const s = await fs.stat(p);
+      return { size: s.size, mtimeMs: s.mtimeMs };
+    } catch {
+      return null;
+    }
+  });
+
   ipcMain.handle('shell:openPath', async (_e, p: string) => shell.openPath(p));
   ipcMain.handle('shell:showItem', async (_e, p: string) => shell.showItemInFolder(p));
   ipcMain.handle('shell:userData', async () => userDataPath());

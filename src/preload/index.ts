@@ -130,6 +130,8 @@ const api = {
 
   fs: {
     exists: (p: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', p),
+    stat: (p: string): Promise<{ size: number; mtimeMs: number } | null> =>
+      ipcRenderer.invoke('fs:stat', p),
   },
 
   shellOps: {

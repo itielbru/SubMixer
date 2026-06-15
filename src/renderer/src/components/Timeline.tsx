@@ -622,6 +622,31 @@ export function Timeline({
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedIdx, onDelete]);
 
+  // Arrow-key nudge/extend when the canvas is focused (a11y keyboard fallback).
+  const NUDGE = 0.1;
+  const onCanvasKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+      if (selectedIdx < 0) return;
+      const cue = cues[selectedIdx];
+      if (!cue) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? NUDGE : -NUDGE;
+        if (e.shiftKey) {
+          // Extend/shrink end
+          const newEnd = Math.max(cue.start + MIN_DUR, cue.end + delta);
+          onUpdateCue(selectedIdx, { end: newEnd });
+        } else {
+          // Move whole cue
+          const newStart = Math.max(0, cue.start + delta);
+          const dur = cue.end - cue.start;
+          onUpdateCue(selectedIdx, { start: newStart, end: newStart + dur });
+        }
+      }
+    },
+    [selectedIdx, cues, onUpdateCue],
+  );
+
   // Toolbar: zoom in/out/fit
   const zoom = (factor: number) => {
     const span = view[1] - view[0];
@@ -700,11 +725,15 @@ export function Timeline({
         <canvas
           ref={canvasRef}
           style={{ width: '100%', height: '100%', display: 'block' }}
+          tabIndex={0}
+          role="application"
+          aria-label={t('tl_aria_label')}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onWheel={onWheel}
+          onKeyDown={onCanvasKeyDown}
         />
       </div>
     </div>
