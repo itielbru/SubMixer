@@ -16,19 +16,7 @@ import { PreviewBar } from './components/PreviewBar';
 import type { SubOverlayStyle } from './components/VideoPreview';
 import { SubsDrawer } from './components/SubsDrawer';
 import { BottomBar } from './components/BottomBar';
-import { OpenDialog } from './components/modals/OpenDialog';
-import { HistoryModal } from './components/modals/HistoryModal';
-import { FFmpegCommandModal } from './components/modals/FFmpegCommand';
-import { SettingsModal } from './components/modals/Settings';
-import { ShortcutsModal } from './components/modals/ShortcutsModal';
-import { VisualSyncModal } from './components/modals/VisualSyncModal';
-import { AdjustAllTimesModal } from './components/modals/AdjustAllTimesModal';
-import { FixCommonErrorsModal } from './components/modals/FixCommonErrorsModal';
-import { FindReplaceModal } from './components/modals/FindReplaceModal';
-import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
-import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
-import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
-import { WhatsNewModal } from './components/modals/WhatsNewModal';
+import type { BatchItem } from './components/modals/BatchQueueModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
@@ -41,6 +29,8 @@ import { I18nProvider, useT } from './hooks/useTranslation';
 import { useExportStore } from './state/exportStore';
 import { useAppEnvStore } from './state/appEnvStore';
 import { useDocStore } from './state/docStore';
+import { useModalStore } from './state/modalStore';
+import { ModalsHost } from './containers/ModalsHost';
 
 interface LogLine {
   time: string;
@@ -165,32 +155,21 @@ function AppContent({
   const history = useAppEnvStore((s) => s.history);
   const setHistory = useAppEnvStore((s) => s.setHistory);
 
-  const [showOpen, setShowOpen] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showCmd, setShowCmd] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showVisualSync, setShowVisualSync] = useState(false);
-  const [showAdjustAll, setShowAdjustAll] = useState(false);
-  const [showFixErrors, setShowFixErrors] = useState(false);
-  const [showFindReplace, setShowFindReplace] = useState(false);
-  const [exportConfirm, setExportConfirm] = useState<
-    'mux' | 'overwrite' | { kind: 'srt'; sub: ExternalSub } | null
-  >(null);
-  const [overwriteFileInfo, setOverwriteFileInfo] = useState<{
-    size: number;
-    mtimeMs: number;
-  } | null>(null);
+  const {
+    openModal,
+    closeModal,
+    setExportConfirm,
+    setOverwriteFileInfo,
+    setWhatsNewVersion,
+    setAutosaveOffer,
+    autosaveOffer,
+  } = useModalStore();
   const batchQueue = useExportStore((s) => s.batchQueue);
   const addBatchItems = useExportStore((s) => s.addBatchItems);
   const updateBatchItem = useExportStore((s) => s.updateBatchItem);
   const removeBatchItem = useExportStore((s) => s.removeBatchItem);
   const clearDoneBatch = useExportStore((s) => s.clearDoneBatch);
-  const [showBatchQueue, setShowBatchQueue] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [projectPath, setProjectPath] = useState<string | null>(null);
-  const [autosaveOffer, setAutosaveOffer] = useState<ProjectData | null>(null);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -230,7 +209,15 @@ function AppContent({
         else void window.api.project.clearAutosave();
       }
     })();
-  }, [setIsWin, setAppVer, setFfLine, setFfmpegOk, setHistory]);
+  }, [
+    setIsWin,
+    setAppVer,
+    setFfLine,
+    setFfmpegOk,
+    setHistory,
+    setAutosaveOffer,
+    setWhatsNewVersion,
+  ]);
 
   // Autosave every 60s when a video is loaded
   useEffect(() => {
@@ -1048,7 +1035,7 @@ function AppContent({
     }
     const s = await window.api.exporting.cmdString(plan);
     setCmdStr(s);
-    setShowCmd(true);
+    openModal('cmd');
   };
 
   const doMuxExport = async (): Promise<void> => {
@@ -1307,7 +1294,7 @@ function AppContent({
         toast(t('export_already_running'), 'warn');
         return;
       }
-      setShowHistory(false);
+      closeModal('history');
       const extForRun = plan.externalSubs.map((s) => ({
         path: s.path,
         offset: s.offset,
@@ -1331,7 +1318,7 @@ function AppContent({
       }
       await refreshHistory();
     },
-    [exporting, t, toast, runExportJob, refreshHistory, pushLog],
+    [exporting, t, toast, runExportJob, refreshHistory, pushLog, closeModal],
   );
 
   const browseDest = async () => {
@@ -1362,12 +1349,12 @@ function AppContent({
 
   // Menu IPC — menuRef avoids stale closures while listeners stay registered once
   useEffect(() => {
-    const openFile = () => setShowOpen(true);
+    const openFile = () => openModal('open');
     const addSrt = () => void menuRef.current.pickSrtFiles();
     const doExport = () => void menuRef.current.handleExport();
     const cancelEx = () => void menuRef.current.cancelExportJob();
     const toggleDr = () => setDrawerOpen((d) => !d);
-    const hist = () => void menuRef.current.refreshHistory().then(() => setShowHistory(true));
+    const hist = () => void menuRef.current.refreshHistory().then(() => openModal('history'));
     const ffmpegDlg = () => void menuRef.current.openCmdModal();
     const checkFf = () =>
       void window.api.ffmpeg.status(true).then((ff) => {
@@ -1390,7 +1377,7 @@ function AppContent({
       window.api.menu.on('menu:ffmpegCmd', ffmpegDlg),
       window.api.menu.on('menu:checkFFmpeg', checkFf),
       window.api.menu.on('menu:about', about),
-      window.api.menu.on('menu:diagnostics', () => setShowDiagnostics(true)),
+      window.api.menu.on('menu:diagnostics', () => openModal('diagnostics')),
       window.api.menu.on('menu:whatsnew', () => {
         void window.api.app.version().then((v) => setWhatsNewVersion(v));
       }),
@@ -1517,14 +1504,14 @@ function AppContent({
         episode={episode}
         appVersion={appVer}
         ffVersion={ffLine}
-        onOpenFile={() => setShowOpen(true)}
-        onOpenHistory={() => void refreshHistory().then(() => setShowHistory(true))}
-        onOpenSettings={() => setShowSettings(true)}
+        onOpenFile={() => openModal('open')}
+        onOpenHistory={() => void refreshHistory().then(() => openModal('history'))}
+        onOpenSettings={() => openModal('settings')}
       />
 
       <div className="main">
         <aside className="col-left">
-          <SourcePanel file={file} onOpenFile={() => setShowOpen(true)} />
+          <SourcePanel file={file} onOpenFile={() => openModal('open')} />
           <ContentDetails
             contentType={contentType}
             onContentType={setContentType}
@@ -1638,11 +1625,11 @@ function AppContent({
               onShiftCues={shiftCues}
               onSplitCue={splitCue}
               onMergeCue={mergeCue}
-              onOpenShortcuts={() => setShowShortcuts(true)}
-              onOpenFixErrors={() => setShowFixErrors(true)}
-              onOpenFindReplace={() => setShowFindReplace(true)}
+              onOpenShortcuts={() => openModal('shortcuts')}
+              onOpenFixErrors={() => openModal('fixErrors')}
+              onOpenFindReplace={() => openModal('findReplace')}
               onAdjustAllTimes={() => {
-                if (cues.length > 0) setShowAdjustAll(true);
+                if (cues.length > 0) openModal('adjustAll');
                 else toast(t('no_srt_loaded'), 'warn');
               }}
               onDuplicateCue={() => {
@@ -1671,7 +1658,7 @@ function AppContent({
             onVisualSync={() => {
               if (cues.length > 0) {
                 setCenterTab('preview');
-                setShowVisualSync(true);
+                openModal('visualSync');
               } else toast(t('no_srt_loaded'), 'warn');
             }}
           />
@@ -1682,7 +1669,7 @@ function AppContent({
         drawerOpen={drawerOpen}
         onToggleDrawer={() => setDrawerOpen((d) => !d)}
         onShowFfmpeg={() => void openCmdModal()}
-        onOpenQueue={() => setShowBatchQueue(true)}
+        onOpenQueue={() => openModal('batchQueue')}
         batchCount={batchQueue.filter((x) => x.status === 'pending').length}
         logs={logs}
         estMB={estSize}
@@ -1705,141 +1692,35 @@ function AppContent({
         ))}
       </div>
 
-      {showOpen && (
-        <OpenDialog
-          recents={settings.recentFiles}
-          onClose={() => setShowOpen(false)}
-          onPick={(p) => {
-            setShowOpen(false);
-            void loadFile(p);
-          }}
-          onBrowse={async () => {
-            const p = await window.api.dialog.openVideo();
-            if (p) {
-              setShowOpen(false);
-              void loadFile(p);
-            }
-          }}
-        />
-      )}
-
-      {showHistory && (
-        <HistoryModal
-          history={history}
-          onClose={() => setShowHistory(false)}
-          onClear={() => void window.api.history.clear().then(refreshHistory)}
-          onShow={(p) => void window.api.shellOps.showItem(p)}
-          onReExport={handleReExport}
-        />
-      )}
-
-      {showCmd && (
-        <FFmpegCommandModal
-          cmd={cmdStr}
-          onClose={() => setShowCmd(false)}
-          onCopy={() => toast(t('cmd_copied'), 'ok')}
-        />
-      )}
-
-      {showShortcuts && (
-        <ShortcutsModal
-          keybindings={settings.keybindings}
-          onSaveKeybinding={(id, key) =>
-            setOne('keybindings', { ...settings.keybindings, [id]: key })
-          }
-          onResetKeybinding={(id) => {
-            const next = { ...settings.keybindings };
-            delete next[id];
-            setOne('keybindings', next);
-          }}
-          onClose={() => setShowShortcuts(false)}
-        />
-      )}
-
-      {showVisualSync && activeSub && cues.length > 0 && (
-        <VisualSyncModal
-          cues={cues}
-          previewT={previewT}
-          onSeek={seekToFileCue}
-          onApply={(offset, speed) => updateSub(activeSub.id, { offset, speed })}
-          onClose={() => setShowVisualSync(false)}
-        />
-      )}
-
-      {showAdjustAll && cues.length > 0 && (
-        <AdjustAllTimesModal
-          cueCount={cues.length}
-          selectedCueIdx={previewSelectedIdx}
-          onApply={(deltaSec, fromIdx) => shiftAllCues(deltaSec, fromIdx)}
-          onClose={() => setShowAdjustAll(false)}
-        />
-      )}
-
-      {showFixErrors && cues.length > 0 && (
-        <FixCommonErrorsModal
-          cues={cues}
-          minGapSec={settings.minGapSec}
-          onApply={setCuesForActiveSub}
-          onClose={() => setShowFixErrors(false)}
-        />
-      )}
-
-      {showFindReplace && cues.length > 0 && (
-        <FindReplaceModal
-          cues={cues}
-          selectedIdx={previewSelectedIdx}
-          onApply={setCuesForActiveSub}
-          onDuplicate={(idx) => duplicateCue(idx)}
-          onClose={() => setShowFindReplace(false)}
-        />
-      )}
-
-      {exportConfirm && (
-        <ExportConfirmModal
-          kind={exportConfirm === 'overwrite' ? 'overwrite' : 'double-apply'}
-          fileInfo={exportConfirm === 'overwrite' ? overwriteFileInfo : undefined}
-          onClose={() => {
-            setExportConfirm(null);
-            setOverwriteFileInfo(null);
-          }}
-          onConfirm={() => {
-            const pending = exportConfirm;
-            setExportConfirm(null);
-            setOverwriteFileInfo(null);
-            if (pending === 'mux' || pending === 'overwrite') void doMuxExport();
-            else if (pending && typeof pending === 'object') void doExportSrt(pending.sub);
-          }}
-        />
-      )}
-
-      {showSettings && (
-        <SettingsModal
-          settings={settings}
-          onClose={() => setShowSettings(false)}
-          onChange={setOne}
-          onChooseFolder={async () => window.api.dialog.chooseFolder(settings.defaultDestFolder)}
-        />
-      )}
-
-      {showBatchQueue && (
-        <BatchQueueModal
-          items={batchQueue}
-          exporting={exporting}
-          onClose={() => setShowBatchQueue(false)}
-          onRemove={(id) => removeBatchItem(id)}
-          onAddMultiple={() => void addMultipleVideosToBatch()}
-          onRunAll={() => {
-            setShowBatchQueue(false);
-            void runBatchQueue();
-          }}
-          onClearDone={() => clearDoneBatch()}
-        />
-      )}
-
-      {showDiagnostics && <DiagnosticsModal onClose={() => setShowDiagnostics(false)} />}
-      {whatsNewVersion && (
-        <WhatsNewModal version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
-      )}
+      <ModalsHost
+        ctx={{
+          settings,
+          setOne,
+          cues,
+          activeSub,
+          previewT,
+          previewSelectedIdx,
+          exporting,
+          batchQueue,
+          cmdStr,
+          history,
+          loadFile,
+          handleReExport,
+          toast,
+          seekToFileCue,
+          updateSub,
+          shiftAllCues,
+          setCuesForActiveSub,
+          duplicateCue,
+          doMuxExport,
+          doExportSrt,
+          refreshHistory,
+          runBatchQueue,
+          addMultipleVideosToBatch,
+          removeBatchItem,
+          clearDoneBatch,
+        }}
+      />
 
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>
