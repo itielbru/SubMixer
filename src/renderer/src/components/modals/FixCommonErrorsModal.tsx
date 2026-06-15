@@ -51,7 +51,7 @@ export function FixCommonErrorsModal({ cues, minGapSec, onApply, onClose }: Prop
     <Modal onClose={onClose} label={t('fix_errors_title')} className="modal-wide">
       <div className="modal-h">
         <div className="modal-t">{t('fix_errors_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

@@ -17,7 +17,7 @@ export function ExportConfirmModal({ kind = 'double-apply', onConfirm, onClose }
     <Modal onClose={onClose} label={title}>
       <div className="modal-h">
         <div className="modal-t">{title}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

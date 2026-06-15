@@ -40,7 +40,7 @@ export function VisualSyncModal({ cues, previewT, onSeek, onApply, onClose }: Pr
     <Modal onClose={onClose} label={t('visual_sync_title')} className="modal-wide">
       <div className="modal-h">
         <div className="modal-t">{t('visual_sync_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

@@ -66,7 +66,7 @@ export function DiagnosticsModal({ onClose }: Props) {
               {copied ? t('diag_copied') : t('diag_copy')}
             </button>
           )}
-          <button className="icon-btn" type="button" onClick={onClose}>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
             <Ico d={I.x} />
           </button>
         </div>

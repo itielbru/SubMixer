@@ -43,7 +43,7 @@ export function FindReplaceModal({ cues, selectedIdx, onApply, onDuplicate, onCl
     <Modal onClose={onClose} label={t('find_replace_title')}>
       <div className="modal-h">
         <div className="modal-t">{t('find_replace_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

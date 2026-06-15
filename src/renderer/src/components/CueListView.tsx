@@ -264,6 +264,27 @@ function CueListViewImpl({
         aria-multiselectable="true"
         aria-rowcount={total}
         aria-label={t('cue_list_title')}
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (cues.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = Math.min(cues.length - 1, (selectedIdx < 0 ? 0 : selectedIdx) + 1);
+            onSelect(next);
+            onSeek(cues[next].start);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = Math.max(0, (selectedIdx < 0 ? 0 : selectedIdx) - 1);
+            onSelect(prev);
+            onSeek(cues[prev].start);
+          } else if (e.key === 'Enter' && selectedIdx >= 0 && editingIdx < 0) {
+            e.preventDefault();
+            startEdit(selectedIdx);
+          } else if (e.key === 'Delete' && selectedIdx >= 0 && editingIdx < 0) {
+            e.preventDefault();
+            onDeleteCue(selectedIdx);
+          }
+        }}
       >
         {topPad > 0 && <div style={{ height: topPad }} aria-hidden />}
         {cues.slice(startIdx, endIdx).map((cue, j) => {

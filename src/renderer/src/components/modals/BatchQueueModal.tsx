@@ -45,7 +45,7 @@ export function BatchQueueModal({
               <Ico d={I.trash} size={12} /> {t('history_clear_btn')}
             </button>
           )}
-          <button className="icon-btn" type="button" onClick={onClose}>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
             <Ico d={I.x} />
           </button>
         </div>

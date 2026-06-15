@@ -19,7 +19,7 @@ export function WhatsNewModal({ version, onClose }: Props) {
         <div className="modal-t">
           {t('whatsnew_title')} — v{version}
         </div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

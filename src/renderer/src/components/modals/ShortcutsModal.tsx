@@ -35,7 +35,7 @@ export function ShortcutsModal({ onClose }: Props) {
     <Modal onClose={onClose} label={t('shortcuts_title')}>
       <div className="modal-h">
         <div className="modal-t">{t('shortcuts_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

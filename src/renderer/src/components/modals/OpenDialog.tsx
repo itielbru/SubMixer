@@ -18,7 +18,7 @@ export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogPro
     <Modal onClose={onClose} label={t('open_dialog_title')}>
       <div className="modal-h">
         <div className="modal-t">{t('open_dialog_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>
