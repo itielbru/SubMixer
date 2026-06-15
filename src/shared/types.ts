@@ -91,6 +91,15 @@ export interface ExportPlan {
    *  instead of muxing it as a soft track. Requires re-encoding the video.
    *  null = normal soft-subtitle mux. */
   burnInSubIndex: number | null;
+  /** Encode quality (only applies when burnInSubIndex !== null). */
+  encodePreset: string;
+  encodeCrf: number;
+  /** Burn-in subtitle appearance (only applies when burnInSubIndex !== null). */
+  burnInFontSize: number;
+  burnInPrimaryColor: string;
+  burnInOutline: number;
+  /** MP4 audio bitrate override when transcoding is required (kbps). */
+  mp4AudioBitrate: number;
 }
 
 export interface ExportProgress {
@@ -143,6 +152,20 @@ export interface AppSettings {
   subPosition: 'bottom' | 'top';
   /** Burn the active external subtitle into the video on export (re-encodes). */
   burnInSubs: boolean;
+  /** Default output container for new exports. */
+  defaultContainer: 'mkv' | 'mp4';
+  /** x264 preset for burn-in encodes (speed ↔ quality trade-off). */
+  encodePreset: 'ultrafast' | 'veryfast' | 'faster' | 'fast' | 'medium' | 'slow';
+  /** CRF quality value for burn-in encodes (lower = higher quality). */
+  encodeCrf: number;
+  /** Audio bitrate in kbps when MP4 export must transcode the audio. */
+  mp4AudioBitrate: number;
+  /** Burn-in subtitle font size (scaled to video height by ffmpeg). */
+  burnInFontSize: number;
+  /** Burn-in primary text color as hex (#RRGGBB). */
+  burnInPrimaryColor: string;
+  /** Burn-in outline thickness (0 = none, 1–4 = thicker). */
+  burnInOutline: number;
   /** Last version the user saw in the "What's New" modal; empty string on first run. */
   lastSeenVersion: string;
 }

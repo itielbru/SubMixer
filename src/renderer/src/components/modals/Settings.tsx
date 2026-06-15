@@ -232,6 +232,90 @@ export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: P
             {t('burn_in_hint')}
           </div>
 
+          <label className="settings-section">{t('settings_export')}</label>
+          <label>{t('settings_default_container')}</label>
+          <div className="seg-mode">
+            <button
+              className={settings.defaultContainer === 'mkv' ? 'on' : ''}
+              onClick={() => onChange('defaultContainer', 'mkv')}
+            >
+              MKV
+            </button>
+            <button
+              className={settings.defaultContainer === 'mp4' ? 'on' : ''}
+              onClick={() => onChange('defaultContainer', 'mp4')}
+            >
+              MP4
+            </button>
+          </div>
+
+          <label>{t('settings_audio_bitrate')}</label>
+          <Dropdown
+            value={String(settings.mp4AudioBitrate)}
+            onChange={(v) => onChange('mp4AudioBitrate', Number(v))}
+            options={['128', '160', '192', '256', '320']}
+          />
+
+          <label className="settings-section">{t('settings_encode')}</label>
+          <label>{t('settings_encode_preset')}</label>
+          <Dropdown
+            value={settings.encodePreset}
+            onChange={(v) => onChange('encodePreset', v as AppSettings['encodePreset'])}
+            options={[
+              { value: 'ultrafast', label: t('preset_ultrafast') },
+              { value: 'veryfast', label: t('preset_veryfast') },
+              { value: 'faster', label: t('preset_faster') },
+              { value: 'fast', label: t('preset_fast') },
+              { value: 'medium', label: t('preset_medium') },
+              { value: 'slow', label: t('preset_slow') },
+            ]}
+          />
+
+          <label>{t('settings_encode_crf')}</label>
+          <input
+            type="number"
+            min={15}
+            max={35}
+            step={1}
+            value={settings.encodeCrf}
+            onChange={(e) =>
+              onChange('encodeCrf', Math.min(35, Math.max(15, Number(e.target.value) || 20)))
+            }
+          />
+
+          <label className="settings-section">{t('settings_burnin_style')}</label>
+          <label>{t('settings_burnin_fontsize')}</label>
+          <input
+            type="number"
+            min={12}
+            max={72}
+            step={2}
+            value={settings.burnInFontSize}
+            onChange={(e) =>
+              onChange('burnInFontSize', Math.min(72, Math.max(12, Number(e.target.value) || 24)))
+            }
+          />
+
+          <label>{t('settings_burnin_color')}</label>
+          <input
+            type="color"
+            className="color-input"
+            value={settings.burnInPrimaryColor}
+            onChange={(e) => onChange('burnInPrimaryColor', e.target.value)}
+          />
+
+          <label>{t('settings_burnin_outline')}</label>
+          <input
+            type="number"
+            min={0}
+            max={4}
+            step={1}
+            value={settings.burnInOutline}
+            onChange={(e) =>
+              onChange('burnInOutline', Math.min(4, Math.max(0, Number(e.target.value) || 2)))
+            }
+          />
+
           {import.meta.env.DEV && (
             <>
               <label>{t('dev_mode')}</label>

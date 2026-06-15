@@ -443,7 +443,7 @@ function AppContent({
   );
 
   const shiftAllCues = useCallback(
-    (deltaSec: number, fromIdx: number): void => {
+    (deltaSec: number, fromIdx: number, speed = 1): void => {
       if (!activeSubId) return;
       snapshotCues(activeSubId, `shiftAll:${activeSubId}:${fromIdx}`);
       setCuesBySubId((m) => {
@@ -453,8 +453,8 @@ function AppContent({
         for (let i = fromIdx; i < next.length; i++) {
           next[i] = {
             ...next[i],
-            start: Math.max(0, next[i].start + deltaSec),
-            end: Math.max(0, next[i].end + deltaSec),
+            start: Math.max(0, next[i].start * speed + deltaSec),
+            end: Math.max(0, next[i].end * speed + deltaSec),
           };
         }
         return { ...m, [activeSubId]: next };
@@ -635,7 +635,7 @@ function AppContent({
     setYear(f.year);
     setOverrideName(false);
     setCustomName('');
-    setContainer(f.container || 'MKV');
+    setContainer(settings.defaultContainer.toUpperCase());
     pushLog(`נטען: ${f.name}`, 'info');
     pushLog(
       `probe ok · streams=${f.tracks.length} · audio=${f.tracks.filter((x) => x.kind === 'A').length} · subs=${f.tracks.filter((x) => x.kind === 'S').length}`,
@@ -899,8 +899,29 @@ function AppContent({
       metadataTitle: outName.replace(/\.[^.]+$/, ''),
       container: container.toLowerCase() === 'mp4' ? 'mp4' : 'mkv',
       burnInSubIndex,
+      encodePreset: settings.encodePreset,
+      encodeCrf: settings.encodeCrf,
+      burnInFontSize: settings.burnInFontSize,
+      burnInPrimaryColor: settings.burnInPrimaryColor,
+      burnInOutline: settings.burnInOutline,
+      mp4AudioBitrate: settings.mp4AudioBitrate,
     };
-  }, [file, tracks, extSubs, outPath, outName, container, settings.burnInSubs, activeSubId]);
+  }, [
+    file,
+    tracks,
+    extSubs,
+    outPath,
+    outName,
+    container,
+    settings.burnInSubs,
+    activeSubId,
+    settings.encodePreset,
+    settings.encodeCrf,
+    settings.burnInFontSize,
+    settings.burnInPrimaryColor,
+    settings.burnInOutline,
+    settings.mp4AudioBitrate,
+  ]);
 
   const openCmdModal = async () => {
     const plan = buildPlan();
@@ -1242,7 +1263,10 @@ function AppContent({
             episode={episode}
             onEpisode={setEpisode}
             container={container}
-            onContainer={setContainer}
+            onContainer={(c) => {
+              setContainer(c);
+              void setOne('defaultContainer', c.toLowerCase() as 'mkv' | 'mp4');
+            }}
             destFolder={destFolder}
             onDestFolder={setDestFolder}
             onBrowseFolder={() => void browseDest()}

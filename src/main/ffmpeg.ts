@@ -640,6 +640,15 @@ function escapeSubtitlesFilterPath(p: string): string {
   return p.replace(/\\/g, '/').replace(/:/g, '\\:');
 }
 
+/** Convert #RRGGBB hex to ASS colour format &H00BBGGRR. */
+function hexToAssColor(hex: string): string {
+  const clean = hex.replace('#', '').padEnd(6, '0');
+  const r = clean.slice(0, 2);
+  const g = clean.slice(2, 4);
+  const b = clean.slice(4, 6);
+  return `&H00${b}${g}${r}`;
+}
+
 export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): string[] {
   const args: string[] = ['-y', '-hide_banner', '-stats'];
 
@@ -678,17 +687,24 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
   if (plan.videoTrackId !== null) {
     if (burning) {
       const esc = escapeSubtitlesFilterPath(processedSubPaths[burnIdx]);
-      args.push('-vf', `subtitles='${esc}':force_style='Outline=2,Shadow=0'`);
-      args.push('-c:v', 'libx264', '-preset', 'faster', '-crf', '20', '-pix_fmt', 'yuv420p');
+      const outline = plan.burnInOutline ?? 2;
+      const fontSize = plan.burnInFontSize ?? 24;
+      const color = hexToAssColor(plan.burnInPrimaryColor ?? '#ffffff');
+      const forceStyle = `FontSize=${fontSize},PrimaryColour=${color},Outline=${outline},Shadow=0`;
+      args.push('-vf', `subtitles='${esc}':force_style='${forceStyle}'`);
+      const preset = plan.encodePreset ?? 'faster';
+      const crf = plan.encodeCrf ?? 20;
+      args.push('-c:v', 'libx264', '-preset', preset, '-crf', String(crf), '-pix_fmt', 'yuv420p');
     } else {
       args.push('-c:v', 'copy');
     }
   }
 
+  const audioBitrateK = `${plan.mp4AudioBitrate ?? 192}k`;
   plan.audioTracks.forEach((a, idx) => {
     if (plan.container === 'mp4' && !mp4AudioCopySafe(a.codecName)) {
       args.push(`-c:a:${idx}`, 'aac');
-      args.push(`-b:a:${idx}`, '192k');
+      args.push(`-b:a:${idx}`, audioBitrateK);
     } else {
       args.push(`-c:a:${idx}`, 'copy');
     }

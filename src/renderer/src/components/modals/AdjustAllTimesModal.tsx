@@ -6,19 +6,19 @@ import { Modal } from '../ui/Modal';
 interface Props {
   cueCount: number;
   selectedCueIdx: number;
-  onApply: (deltaMs: number, fromIdx: number) => void;
+  onApply: (deltaSec: number, fromIdx: number, speed: number) => void;
   onClose: () => void;
 }
 
 export function AdjustAllTimesModal({ cueCount, selectedCueIdx, onApply, onClose }: Props) {
   const { t } = useT();
   const [ms, setMs] = useState(0);
+  const [speed, setSpeed] = useState(1);
   const [partial, setPartial] = useState(false);
   const [fromIdx, setFromIdx] = useState(() => (selectedCueIdx >= 0 ? selectedCueIdx : 0));
 
   const apply = (): void => {
-    const deltaSec = ms / 1000;
-    onApply(deltaSec, partial ? fromIdx : 0);
+    onApply(ms / 1000, partial ? fromIdx : 0, speed);
     onClose();
   };
 
@@ -56,6 +56,51 @@ export function AdjustAllTimesModal({ cueCount, selectedCueIdx, onApply, onClose
           </button>
           <button className="btn ghost compact" type="button" onClick={() => setMs((v) => v + 500)}>
             +500
+          </button>
+        </div>
+
+        <label className="field" style={{ marginTop: 14 }}>
+          <span>{t('adjust_all_speed')}</span>
+          <input
+            type="number"
+            min={0.5}
+            max={2}
+            step={0.01}
+            value={speed}
+            onChange={(e) => setSpeed(Math.min(2, Math.max(0.5, Number(e.target.value) || 1)))}
+          />
+        </label>
+        <div className="quick-row">
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.max(0.5, Math.round((v - 0.05) * 100) / 100))}
+          >
+            −5%
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.max(0.5, Math.round((v - 0.01) * 100) / 100))}
+          >
+            −1%
+          </button>
+          <button className="btn ghost compact" type="button" onClick={() => setSpeed(1)}>
+            1×
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.min(2, Math.round((v + 0.01) * 100) / 100))}
+          >
+            +1%
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.min(2, Math.round((v + 0.05) * 100) / 100))}
+          >
+            +5%
           </button>
         </div>
 
