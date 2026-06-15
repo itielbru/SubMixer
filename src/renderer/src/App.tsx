@@ -5,6 +5,7 @@ import type {
   ExportPlan,
   ExternalSub,
   MediaFile,
+  ProjectData,
   SrtCue,
   Track,
 } from '@shared/types';
@@ -159,6 +160,8 @@ function AppContent({
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
+  const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [autosaveOffer, setAutosaveOffer] = useState<ProjectData | null>(null);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -183,6 +186,36 @@ function AppContent({
   tracksRef.current = tracks;
   const cuesRef = useRef(cuesBySubId);
   cuesRef.current = cuesBySubId;
+
+  // Refs for project save (stable closure without re-subscribing menu listeners)
+  const fileRef = useRef(file);
+  fileRef.current = file;
+  const extSubsRef = useRef(extSubs);
+  extSubsRef.current = extSubs;
+  const activeSubIdRef = useRef(activeSubId);
+  activeSubIdRef.current = activeSubId;
+  const metaRef = useRef({
+    contentType,
+    title,
+    year,
+    season,
+    episode,
+    container,
+    overrideName,
+    customName,
+  });
+  metaRef.current = {
+    contentType,
+    title,
+    year,
+    season,
+    episode,
+    container,
+    overrideName,
+    customName,
+  };
+  const editedSubIdsRef = useRef(editedSubIds);
+  editedSubIdsRef.current = editedSubIds;
 
   const pushUndo = useCallback(() => {
     undoStack.current.push({ kind: 'tracks', tracks: cloneTracks(tracksRef.current) });
@@ -240,12 +273,13 @@ function AppContent({
   // ── bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
     void (async () => {
-      const [plat, ver, ff, hist, s] = await Promise.all([
+      const [plat, ver, ff, hist, s, autosave] = await Promise.all([
         window.api.app.platform(),
         window.api.app.version(),
         window.api.ffmpeg.status(),
         window.api.history.list(),
         window.api.settings.get(),
+        window.api.project.getAutosave(),
       ]);
       setIsWin(plat === 'win32');
       setAppVer(ver);
@@ -257,7 +291,22 @@ function AppContent({
         setWhatsNewVersion(ver);
         void window.api.settings.setOne('lastSeenVersion', ver);
       }
+      // Offer to restore autosaved project if one exists.
+      if (autosave) {
+        const videoExists = await window.api.fs.exists(autosave.videoPath);
+        if (videoExists) setAutosaveOffer(autosave);
+        else void window.api.project.clearAutosave();
+      }
     })();
+  }, []);
+
+  // Autosave every 60s when a video is loaded
+  useEffect(() => {
+    const id = setInterval(() => {
+      const data = buildProjectData();
+      if (data) void window.api.project.autosave(data);
+    }, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -740,6 +789,144 @@ function AppContent({
     await doExportSrt(sub);
   };
 
+  const buildProjectData = (): ProjectData | null => {
+    const f = fileRef.current;
+    if (!f) return null;
+    const m = metaRef.current;
+    const subs = extSubsRef.current;
+    const cuesMap = cuesRef.current;
+    const edited = editedSubIdsRef.current;
+    const activePath = (() => {
+      const id = activeSubIdRef.current;
+      if (!id) return null;
+      const s = subs.find((x) => x.id === id);
+      return s?.path ?? null;
+    })();
+    return {
+      schemaVersion: 1,
+      savedAt: new Date().toISOString(),
+      videoPath: f.path,
+      trackOverrides: tracksRef.current.map(({ id, keep, def, forced }) => ({
+        id,
+        keep,
+        def,
+        forced,
+      })),
+      extSubs: subs.map((s) => ({
+        path: s.path,
+        name: s.name,
+        lang: s.lang,
+        trackName: s.trackName,
+        offset: s.offset,
+        speed: s.speed,
+        def: s.def,
+        forced: s.forced,
+        encoding: s.encoding,
+        editedCues: edited.has(s.id) ? (cuesMap[s.id] ?? undefined) : undefined,
+      })),
+      activeSubPath: activePath,
+      metadata: {
+        contentType: m.contentType,
+        title: m.title,
+        year: m.year,
+        season: m.season,
+        episode: m.episode,
+        container: m.container,
+        overrideName: m.overrideName,
+        customName: m.customName,
+      },
+    };
+  };
+
+  const saveProject = async (path?: string): Promise<void> => {
+    const data = buildProjectData();
+    if (!data) {
+      toast(t('project_no_file'), 'warn');
+      return;
+    }
+    const target =
+      path ??
+      projectPath ??
+      (await window.api.project.saveDialog(`${data.metadata.title || 'project'}.submixer`));
+    if (!target) return;
+    const r = await window.api.project.save(data, target);
+    if (r.ok) {
+      setProjectPath(target);
+      void window.api.project.clearAutosave();
+      toast(t('project_saved'), 'ok');
+    } else {
+      toast(`${t('project_save_failed')}: ${r.error}`, 'err');
+    }
+  };
+
+  const loadProjectData = async (data: ProjectData): Promise<void> => {
+    const exists = await window.api.fs.exists(data.videoPath);
+    if (!exists) {
+      toast(t('project_video_missing'), 'err');
+      return;
+    }
+    await loadFile(data.videoPath);
+    // Apply track overrides after probe
+    setTracks((trs) =>
+      trs.map((tr) => {
+        const ov = data.trackOverrides.find((o) => o.id === tr.id);
+        return ov ? { ...tr, keep: ov.keep, def: ov.def, forced: ov.forced } : tr;
+      }),
+    );
+    // Restore metadata
+    setContentType(data.metadata.contentType);
+    setTitle(data.metadata.title);
+    setYear(data.metadata.year);
+    setSeason(data.metadata.season);
+    setEpisode(data.metadata.episode);
+    setContainer(data.metadata.container);
+    setOverrideName(data.metadata.overrideName);
+    setCustomName(data.metadata.customName);
+    // Load external subs
+    const newSubs: ExternalSub[] = [];
+    const newCues: Record<string, SrtCue[]> = {};
+    const newEdited = new Set<string>();
+    for (const ps of data.extSubs) {
+      const subExists = await window.api.fs.exists(ps.path);
+      if (!subExists) {
+        toast(`${ps.name}: not found`, 'warn');
+        continue;
+      }
+      const r = await window.api.srt.add(ps.path);
+      if (!r.ok || !r.sub) {
+        toast(`${ps.name}: ${r.error || t('error')}`, 'warn');
+        continue;
+      }
+      const sub: ExternalSub = {
+        ...r.sub,
+        lang: ps.lang,
+        trackName: ps.trackName,
+        offset: ps.offset,
+        speed: ps.speed,
+        def: ps.def,
+        forced: ps.forced,
+        encoding: ps.encoding,
+      };
+      newSubs.push(sub);
+      if (ps.editedCues && ps.editedCues.length > 0) {
+        newCues[sub.id] = ps.editedCues;
+        newEdited.add(sub.id);
+      } else if (r.cues) {
+        newCues[sub.id] = r.cues;
+      }
+    }
+    setExtSubs(newSubs);
+    setCuesBySubId(newCues);
+    setEditedSubIds(newEdited);
+    // Set active sub to the one that was active when saved
+    if (data.activeSubPath) {
+      const activeSub = newSubs.find((s) => s.path === data.activeSubPath);
+      if (activeSub) setActiveSubId(activeSub.id);
+    }
+    void window.api.project.clearAutosave();
+    toast(t('project_loaded'), 'ok');
+  };
+
   const onDropFile = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -1114,6 +1301,8 @@ function AppContent({
     cancelExportJob,
     refreshHistory,
     openCmdModal,
+    saveProject,
+    loadProjectData,
     toast,
   });
   menuRef.current = {
@@ -1122,6 +1311,8 @@ function AppContent({
     cancelExportJob,
     refreshHistory,
     openCmdModal,
+    saveProject,
+    loadProjectData,
     toast,
   };
 
@@ -1159,6 +1350,21 @@ function AppContent({
       window.api.menu.on('menu:whatsnew', () => {
         void window.api.app.version().then((v) => setWhatsNewVersion(v));
       }),
+      window.api.menu.on('menu:saveProject', () => void menuRef.current.saveProject()),
+      window.api.menu.on(
+        'menu:openProject',
+        () =>
+          void window.api.project.openDialog().then((p) => {
+            if (!p) return;
+            void window.api.project.load(p).then((r) => {
+              if (r.ok && r.data) {
+                void menuRef.current.loadProjectData(r.data).then(() => setProjectPath(p));
+              } else {
+                menuRef.current.toast(`${t('project_load_failed')}: ${r.error}`, 'err');
+              }
+            });
+          }),
+      ),
     ];
     return () => unsubs.forEach((u) => u());
     // Register native-menu listeners once; handlers read fresh state via menuRef,
@@ -1186,6 +1392,33 @@ function AppContent({
             onClick={() => window.api.ffmpeg.openInstallPage()}
           >
             {t('download')}
+          </button>
+        </div>
+      )}
+
+      {autosaveOffer && (
+        <div className="update-banner">
+          <span>{t('project_autosave_restore')}</span>
+          <button
+            className="btn compact"
+            type="button"
+            onClick={() => {
+              const data = autosaveOffer;
+              setAutosaveOffer(null);
+              void loadProjectData(data);
+            }}
+          >
+            {t('project_restore')}
+          </button>
+          <button
+            className="btn compact ghost"
+            type="button"
+            onClick={() => {
+              setAutosaveOffer(null);
+              void window.api.project.clearAutosave();
+            }}
+          >
+            {t('project_discard')}
           </button>
         </div>
       )}

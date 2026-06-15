@@ -185,6 +185,38 @@ export interface ProbeResult {
   error?: string;
 }
 
+export interface ProjectSubEntry {
+  path: string;
+  name: string;
+  lang: string;
+  trackName: string;
+  offset: number;
+  speed: number;
+  def: boolean;
+  forced: boolean;
+  encoding: string;
+  editedCues?: SrtCue[];
+}
+
+export interface ProjectData {
+  schemaVersion: 1;
+  savedAt: string;
+  videoPath: string;
+  trackOverrides: Array<{ id: number; keep: boolean; def: boolean; forced: boolean }>;
+  extSubs: ProjectSubEntry[];
+  activeSubPath: string | null;
+  metadata: {
+    contentType: 'movie' | 'series';
+    title: string;
+    year: string;
+    season: string;
+    episode: string;
+    container: string;
+    overrideName: boolean;
+    customName: string;
+  };
+}
+
 export interface DiagnosticsInfo {
   appVersion: string;
   electronVersion: string;

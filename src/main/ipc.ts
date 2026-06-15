@@ -44,6 +44,7 @@ import type {
   AppSettings,
   DiagnosticsInfo,
   ExportPlan,
+  ProjectData,
   ProbeResult,
   AddSubResult,
   ExternalSub,
@@ -664,6 +665,91 @@ export function registerIpc(): void {
   // ── Auto-update controls ───────────────────────────────────────────────────
   ipcMain.handle('update:download', async () => downloadUpdate());
   ipcMain.handle('update:install', async () => installUpdate());
+
+  // ── Project save / load ──────────────────────────────────────────────────
+  const autosavePath = () => path.join(userDataPath(), 'projects', 'autosave.submixer');
+
+  ipcMain.handle('project:saveDialog', async (event, defaultName?: string) => {
+    const win = senderWindow(event);
+    const lang = (await getSettings()).lang;
+    const result = await dialog.showSaveDialog(win!, {
+      title: lang === 'he' ? 'שמור פרויקט' : 'Save Project',
+      defaultPath: defaultName || 'project.submixer',
+      filters: [
+        { name: 'SubMixer Project', extensions: ['submixer'] },
+        { name: 'All files', extensions: ['*'] },
+      ],
+    });
+    if (result.canceled) return null;
+    return result.filePath;
+  });
+
+  ipcMain.handle('project:openDialog', async (event) => {
+    const win = senderWindow(event);
+    const lang = (await getSettings()).lang;
+    const result = await dialog.showOpenDialog(win!, {
+      title: lang === 'he' ? 'פתח פרויקט' : 'Open Project',
+      filters: [
+        { name: 'SubMixer Project', extensions: ['submixer'] },
+        { name: 'All files', extensions: ['*'] },
+      ],
+      properties: ['openFile'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('project:save', async (_e, data: ProjectData, filePath: string) => {
+    try {
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('project:load', async (_e, filePath: string) => {
+    try {
+      const text = await fs.readFile(filePath, 'utf-8');
+      const data = JSON.parse(text) as ProjectData;
+      if (data.schemaVersion !== 1) {
+        return { ok: false, error: 'Unsupported project version' };
+      }
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('project:autosave', async (_e, data: ProjectData) => {
+    try {
+      const p = autosavePath();
+      await fs.mkdir(path.dirname(p), { recursive: true });
+      await fs.writeFile(p, JSON.stringify(data), 'utf-8');
+    } catch {
+      // silent — autosave failures must never interrupt the user
+    }
+  });
+
+  ipcMain.handle('project:getAutosave', async () => {
+    try {
+      const text = await fs.readFile(autosavePath(), 'utf-8');
+      const data = JSON.parse(text) as ProjectData;
+      if (data.schemaVersion !== 1) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  });
+
+  ipcMain.handle('project:clearAutosave', async () => {
+    try {
+      await fs.unlink(autosavePath());
+    } catch {
+      // ignore if missing
+    }
+  });
 
   // ── Diagnostics ──────────────────────────────────────────────────────────
   ipcMain.handle('diagnostics:get', async (): Promise<DiagnosticsInfo> => {

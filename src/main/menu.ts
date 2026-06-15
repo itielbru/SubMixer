@@ -62,6 +62,17 @@ export function buildMenu(win: BrowserWindow, lang: 'he' | 'en' = 'he'): Menu {
         },
         { type: 'separator' },
         {
+          label: isHe ? 'שמור פרויקט' : 'Save Project',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => send('menu:saveProject'),
+        },
+        {
+          label: isHe ? 'פתח פרויקט…' : 'Open Project…',
+          accelerator: 'CmdOrCtrl+Shift+P',
+          click: () => send('menu:openProject'),
+        },
+        { type: 'separator' },
+        {
           label: isHe ? 'ייצא קובץ' : 'Export File',
           accelerator: 'CmdOrCtrl+E',
           click: () => send('menu:export'),

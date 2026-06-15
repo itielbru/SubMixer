@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type {
   AppSettings,
   DiagnosticsInfo,
+  ProjectData,
   ProbeResult,
   AddSubResult,
   ExportPlan,
@@ -183,6 +184,19 @@ const api = {
 
   diagnostics: {
     get: (): Promise<DiagnosticsInfo> => ipcRenderer.invoke('diagnostics:get'),
+  },
+
+  project: {
+    saveDialog: (defaultName?: string): Promise<string | null> =>
+      ipcRenderer.invoke('project:saveDialog', defaultName),
+    openDialog: (): Promise<string | null> => ipcRenderer.invoke('project:openDialog'),
+    save: (data: ProjectData, filePath: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('project:save', data, filePath),
+    load: (filePath: string): Promise<{ ok: boolean; data?: ProjectData; error?: string }> =>
+      ipcRenderer.invoke('project:load', filePath),
+    autosave: (data: ProjectData): Promise<void> => ipcRenderer.invoke('project:autosave', data),
+    getAutosave: (): Promise<ProjectData | null> => ipcRenderer.invoke('project:getAutosave'),
+    clearAutosave: (): Promise<void> => ipcRenderer.invoke('project:clearAutosave'),
   },
 
   debug: {
