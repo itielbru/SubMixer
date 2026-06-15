@@ -72,6 +72,61 @@ export function serializeSrt(cues: SrtCue[]): string {
   return out.join('\n');
 }
 
+function fmtVttTs(sec: number): string {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+}
+
+export function serializeVtt(cues: SrtCue[]): string {
+  const out: string[] = ['WEBVTT', ''];
+  cues.forEach((c, i) => {
+    out.push(String(i + 1));
+    out.push(`${fmtVttTs(c.start)} --> ${fmtVttTs(c.end)}`);
+    out.push(c.text);
+    out.push('');
+  });
+  return out.join('\n');
+}
+
+function fmtAssTs(sec: number): string {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const cs = Math.round((sec - Math.floor(sec)) * 100);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+export function serializeAss(cues: SrtCue[]): string {
+  const header = [
+    '[Script Info]',
+    'ScriptType: v4.00+',
+    'PlayResX: 384',
+    'PlayResY: 288',
+    'ScaledBorderAndShadow: yes',
+    '',
+    '[V4+ Styles]',
+    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    'Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1',
+    '',
+    '[Events]',
+    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+  ].join('\n');
+
+  const dialogues = cues
+    .map((c) => {
+      const text = c.text.replace(/\n/g, '\\N');
+      return `Dialogue: 0,${fmtAssTs(c.start)},${fmtAssTs(c.end)},Default,,0,0,0,,${text}`;
+    })
+    .join('\n');
+
+  return `${header}\n${dialogues}\n`;
+}
+
 import { transformCues } from '@shared/cue-sync';
 
 export { transformCues as applyTransform };
@@ -332,8 +387,18 @@ export async function exportTransformedSrt(
 ): Promise<void> {
   const { cues } = await readSrtFile(sourcePath, opts.encoding);
   const transformed = opts.offset === 0 && opts.speed === 1 ? cues : transformCues(cues, opts);
-  const text = serializeSrt(transformed);
-  await fs.writeFile(destPath, '\uFEFF' + text, 'utf-8');
+  const ext = path.extname(destPath).toLowerCase();
+  let text: string;
+  let bom = false;
+  if (ext === '.vtt') {
+    text = serializeVtt(transformed);
+  } else if (ext === '.ass' || ext === '.ssa') {
+    text = serializeAss(transformed);
+  } else {
+    text = serializeSrt(transformed);
+    bom = true;
+  }
+  await fs.writeFile(destPath, bom ? '\uFEFF' + text : text, 'utf-8');
 }
 
 export async function clearTempSrt(): Promise<void> {

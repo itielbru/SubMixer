@@ -348,7 +348,9 @@ export function registerIpc(): void {
       title: t(lang, 'dialog_save_subs_title'),
       defaultPath: defaultName || 'subtitle.srt',
       filters: [
-        { name: 'Subtitles', extensions: ['srt'] },
+        { name: 'SubRip (SRT)', extensions: ['srt'] },
+        { name: 'WebVTT (VTT)', extensions: ['vtt'] },
+        { name: 'ASS/SSA', extensions: ['ass', 'ssa'] },
         { name: 'All files', extensions: ['*'] },
       ],
     });

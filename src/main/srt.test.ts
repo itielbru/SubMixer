@@ -3,7 +3,15 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as iconv from 'iconv-lite';
-import { parseSrt, parseVtt, parseAss, serializeSrt, readSrtFile } from './srt';
+import {
+  parseSrt,
+  parseVtt,
+  parseAss,
+  serializeSrt,
+  serializeVtt,
+  serializeAss,
+  readSrtFile,
+} from './srt';
 
 describe('parseSrt', () => {
   it('parses numbered blocks with comma timestamps', () => {
@@ -80,6 +88,47 @@ describe('serializeSrt', () => {
   it('renumbers cues sequentially', () => {
     const out = serializeSrt([{ idx: 99, start: 0, end: 1, text: 'x' }]);
     expect(out.startsWith('1\n')).toBe(true);
+  });
+});
+
+describe('serializeVtt', () => {
+  it('emits WEBVTT header and dot-separated timestamps', () => {
+    const vtt = serializeVtt([{ idx: 1, start: 1.5, end: 3, text: 'Hi' }]);
+    expect(vtt.startsWith('WEBVTT\n')).toBe(true);
+    expect(vtt).toContain('00:00:01.500 --> 00:00:03.000');
+    expect(vtt).toContain('Hi');
+  });
+
+  it('round-trips through parseVtt', () => {
+    const input = [
+      { idx: 1, start: 1, end: 2, text: 'Hello' },
+      { idx: 2, start: 3, end: 4, text: 'line one\nline two' },
+    ];
+    const reparsed = parseVtt(serializeVtt(input));
+    expect(reparsed[0]).toMatchObject({ start: 1, end: 2, text: 'Hello' });
+    expect(reparsed[1].text).toBe('line one\nline two');
+  });
+});
+
+describe('serializeAss', () => {
+  it('emits ASS header sections and Dialogue lines', () => {
+    const ass = serializeAss([{ idx: 1, start: 61.5, end: 63, text: 'Test' }]);
+    expect(ass).toContain('[Script Info]');
+    expect(ass).toContain('[Events]');
+    expect(ass).toContain('Dialogue: 0,0:01:01.50,0:01:03.00,Default,,0,0,0,,Test');
+  });
+
+  it('converts newlines to \\N in dialogue text', () => {
+    const ass = serializeAss([{ idx: 1, start: 0, end: 1, text: 'line one\nline two' }]);
+    expect(ass).toContain('line one\\Nline two');
+  });
+
+  it('round-trips through parseAss', () => {
+    const input = [{ idx: 1, start: 1.5, end: 3.25, text: 'Hello' }];
+    const reparsed = parseAss(serializeAss(input));
+    expect(reparsed[0].start).toBeCloseTo(1.5);
+    expect(reparsed[0].end).toBeCloseTo(3.25);
+    expect(reparsed[0].text).toBe('Hello');
   });
 });
 
