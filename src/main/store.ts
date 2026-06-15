@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   burnInPrimaryColor: '#ffffff',
   burnInOutline: 2,
   lastSeenVersion: '',
+  keybindings: {},
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');

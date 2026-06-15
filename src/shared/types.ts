@@ -168,6 +168,12 @@ export interface AppSettings {
   burnInOutline: number;
   /** Last version the user saw in the "What's New" modal; empty string on first run. */
   lastSeenVersion: string;
+  /**
+   * Custom key overrides for rebindable shortcuts.
+   * Keys are action IDs (e.g. 'set_start'); values are lowercased KeyboardEvent.key strings.
+   * Absent entries fall back to the built-in default.
+   */
+  keybindings: Partial<Record<string, string>>;
 }
 
 export type SubStyleMode = 'outline' | 'box' | 'none';

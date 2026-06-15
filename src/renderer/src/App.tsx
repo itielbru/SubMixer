@@ -1729,6 +1729,7 @@ function AppContent({
               subOffset={activeSub?.offset ?? 0}
               subSpeed={activeSub?.speed ?? 1}
               subStyle={subOverlayStyle}
+              keybindings={settings.keybindings}
             />
           )}
         </main>
@@ -1817,7 +1818,20 @@ function AppContent({
         />
       )}
 
-      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {showShortcuts && (
+        <ShortcutsModal
+          keybindings={settings.keybindings}
+          onSaveKeybinding={(id, key) =>
+            setOne('keybindings', { ...settings.keybindings, [id]: key })
+          }
+          onResetKeybinding={(id) => {
+            const next = { ...settings.keybindings };
+            delete next[id];
+            setOne('keybindings', next);
+          }}
+          onClose={() => setShowShortcuts(false)}
+        />
+      )}
 
       {showVisualSync && activeSub && cues.length > 0 && (
         <VisualSyncModal

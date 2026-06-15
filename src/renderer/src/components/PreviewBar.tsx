@@ -68,6 +68,8 @@ interface Props {
   subOffset: number;
   subSpeed: number;
   subStyle: SubOverlayStyle;
+  /** Custom key overrides; absent actions use the built-in default key. */
+  keybindings?: Partial<Record<string, string>>;
 }
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5];
@@ -107,6 +109,7 @@ export function PreviewBar({
   subOffset,
   subSpeed,
   subStyle,
+  keybindings = {},
 }: Props) {
   const { t } = useT();
   const syncOpts = useMemo(() => ({ offset: subOffset, speed: subSpeed }), [subOffset, subSpeed]);
@@ -463,18 +466,39 @@ export function PreviewBar({
         handler: () => seekBy(-1),
       },
       { key: 'arrowright', ctrl: true, label: t('shortcut_seek_1s_fwd'), handler: () => seekBy(1) },
-      { key: 'f11', label: t('shortcut_set_start'), handler: setStartHere },
-      { key: 'f12', label: t('shortcut_set_end'), handler: setEndHere },
-      { key: 'insert', label: t('shortcut_insert_cue'), handler: insertHere },
-      { key: 'delete', label: t('shortcut_delete'), handler: deleteHere },
-      { key: 'l', ctrl: true, label: t('shortcut_loop'), handler: () => setLoopOn((v) => !v) },
+      {
+        key: keybindings['set_start'] ?? 'f11',
+        label: t('shortcut_set_start'),
+        handler: setStartHere,
+      },
+      {
+        key: keybindings['set_end'] ?? 'f12',
+        label: t('shortcut_set_end'),
+        handler: setEndHere,
+      },
+      {
+        key: keybindings['insert_cue'] ?? 'insert',
+        label: t('shortcut_insert_cue'),
+        handler: insertHere,
+      },
+      {
+        key: keybindings['delete_cue'] ?? 'delete',
+        label: t('shortcut_delete'),
+        handler: deleteHere,
+      },
+      {
+        key: keybindings['loop'] ?? 'l',
+        ctrl: !keybindings['loop'],
+        label: t('shortcut_loop'),
+        handler: () => setLoopOn((v) => !v),
+      },
       { key: '?', shift: true, label: t('shortcut_help'), handler: () => onOpenShortcuts?.() },
       { key: '/', label: t('shortcut_help'), handler: () => onOpenShortcuts?.() },
     ],
     // The handlers close over previewT/selectedIdx/cues — listing them
     // explicitly keeps the listener fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [previewT, selectedIdx, cues, durationSec, onOpenShortcuts, t],
+    [previewT, selectedIdx, cues, durationSec, onOpenShortcuts, t, keybindings],
   );
   useKeyboardShortcuts(shortcuts);
 

@@ -29,6 +29,7 @@ const DEFAULT: AppSettings = {
   burnInPrimaryColor: '#ffffff',
   burnInOutline: 2,
   lastSeenVersion: '',
+  keybindings: {},
 };
 
 export function useSettings(): [

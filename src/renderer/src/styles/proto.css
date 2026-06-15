@@ -1608,6 +1608,52 @@ body {
 .proto .kbd-label {
   font-size: 12.5px;
   color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.proto .kbd-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3, var(--text-2));
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 14px 0 6px;
+}
+.proto .kbd-btn {
+  cursor: pointer;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: transparent;
+  transition: background 0.15s;
+}
+.proto .kbd-btn:hover {
+  background: var(--accent-faint, color-mix(in srgb, var(--accent) 15%, transparent));
+}
+.proto .kbd-btn.capturing {
+  background: var(--accent);
+  color: #fff;
+  animation: kbd-pulse 0.8s infinite alternate;
+}
+@keyframes kbd-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+.proto .kbd-reset-btn {
+  font-size: 13px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3, var(--text-2));
+  padding: 0 2px;
+  line-height: 1;
+}
+.proto .kbd-reset-btn:hover {
+  color: var(--text);
 }
 
 .proto .tl {
