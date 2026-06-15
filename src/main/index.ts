@@ -49,7 +49,14 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    try {
+      const { protocol } = new URL(details.url);
+      if (protocol === 'https:' || protocol === 'http:') {
+        shell.openExternal(details.url).catch(() => {});
+      }
+    } catch {
+      // ignore malformed URLs
+    }
     return { action: 'deny' };
   });
 
