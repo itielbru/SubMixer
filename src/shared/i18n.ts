@@ -13,6 +13,8 @@ export const translations = {
     error_boundary_title: 'משהו השתבש',
     error_boundary_desc: 'האפליקציה נתקלה בשגיאה בלתי צפויה. ניתן לטעון מחדש ולהמשיך.',
     error_boundary_reload: 'טען מחדש',
+    onboard_drop_video: 'גרור קובץ וידאו לכאן, או לחץ "פתח קובץ וידאו" בתפריט',
+    onboard_then_subs: 'לאחר הטעינה, הוסף קובץ כתוביות וכוון את ההזחה',
     warning: 'אזהרה',
     success: 'הצלחה',
 
@@ -412,6 +414,8 @@ export const translations = {
     error_boundary_title: 'Something went wrong',
     error_boundary_desc: 'The app hit an unexpected error. You can reload and continue.',
     error_boundary_reload: 'Reload',
+    onboard_drop_video: 'Drag a video file here, or use File → Open Video File',
+    onboard_then_subs: 'After loading, add a subtitle file and adjust the offset',
     warning: 'Warning',
     success: 'Success',
 
