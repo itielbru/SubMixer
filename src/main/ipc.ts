@@ -254,7 +254,7 @@ export function registerIpc(): void {
     const result = await dialog.showOpenDialog(win!, {
       title: t(lang, 'dialog_subs_title'),
       filters: [
-        { name: 'Subtitles', extensions: ['srt', 'vtt', 'ass', 'ssa'] },
+        { name: 'Subtitles', extensions: ['srt', 'vtt', 'ass', 'ssa', 'sub', 'ttml', 'dfxp'] },
         { name: 'All files', extensions: ['*'] },
       ],
       properties: ['openFile', 'multiSelections'],

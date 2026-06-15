@@ -7,6 +7,8 @@ import {
   parseSrt,
   parseVtt,
   parseAss,
+  parseSub,
+  parseTtml,
   serializeSrt,
   serializeVtt,
   serializeAss,
@@ -129,6 +131,60 @@ describe('serializeAss', () => {
     expect(reparsed[0].start).toBeCloseTo(1.5);
     expect(reparsed[0].end).toBeCloseTo(3.25);
     expect(reparsed[0].text).toBe('Hello');
+  });
+});
+
+describe('parseSub (MicroDVD)', () => {
+  it('converts frame numbers to seconds using default 25fps', () => {
+    const cues = parseSub('{100}{200}Hello\n{300}{500}World');
+    expect(cues).toHaveLength(2);
+    expect(cues[0].start).toBeCloseTo(4);
+    expect(cues[0].end).toBeCloseTo(8);
+    expect(cues[0].text).toBe('Hello');
+  });
+
+  it('reads fps from {1}{1} header line', () => {
+    const cues = parseSub('{1}{1}30\n{30}{60}Hi');
+    expect(cues).toHaveLength(1);
+    expect(cues[0].start).toBeCloseTo(1);
+    expect(cues[0].end).toBeCloseTo(2);
+  });
+
+  it('converts pipe-separated lines to newlines', () => {
+    const cues = parseSub('{100}{200}line one|line two');
+    expect(cues[0].text).toBe('line one\nline two');
+  });
+});
+
+describe('parseTtml', () => {
+  it('parses basic TTML with HH:MM:SS.mmm timestamps', () => {
+    const ttml = `<?xml version="1.0"?>
+<tt xmlns="http://www.w3.org/ns/ttml">
+  <body><div>
+    <p begin="00:00:01.000" end="00:00:03.500">Hello world</p>
+  </div></body>
+</tt>`;
+    const cues = parseTtml(ttml);
+    expect(cues).toHaveLength(1);
+    expect(cues[0].start).toBeCloseTo(1);
+    expect(cues[0].end).toBeCloseTo(3.5);
+    expect(cues[0].text).toBe('Hello world');
+  });
+
+  it('strips XML tags and decodes entities', () => {
+    const ttml = `<tt xmlns="http://www.w3.org/ns/ttml"><body><div>
+      <p begin="00:00:01.000" end="00:00:02.000"><span>Hello &amp; world</span></p>
+    </div></body></tt>`;
+    const cues = parseTtml(ttml);
+    expect(cues[0].text).toBe('Hello & world');
+  });
+
+  it('converts br elements to newlines', () => {
+    const ttml = `<tt><body><div>
+      <p begin="00:00:01.000" end="00:00:02.000">line one<br/>line two</p>
+    </div></body></tt>`;
+    const cues = parseTtml(ttml);
+    expect(cues[0].text).toBe('line one\nline two');
   });
 });
 

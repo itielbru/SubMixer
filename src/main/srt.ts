@@ -269,6 +269,111 @@ export function parseAss(text: string): SrtCue[] {
   return cues;
 }
 
+// Parse SUB/MicroDVD format to SrtCue
+export function parseSub(text: string, defaultFps = 25): SrtCue[] {
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+  if (!clean) return [];
+
+  const lines = clean.split('\n');
+  const cues: SrtCue[] = [];
+  let fps = defaultFps;
+
+  for (const line of lines) {
+    const m = line.match(/^\{(\d+)\}\{(\d+)\}(.*)$/);
+    if (!m) continue;
+    const startFrame = Number(m[1]);
+    const endFrame = Number(m[2]);
+    const rawText = m[3];
+
+    // {1}{1}fps header line
+    if (startFrame === 1 && endFrame === 1) {
+      const parsedFps = Number(rawText.trim());
+      if (parsedFps > 0) fps = parsedFps;
+      continue;
+    }
+
+    const text = rawText.replace(/\|/g, '\n').trim();
+    if (!text) continue;
+
+    cues.push({
+      idx: cues.length + 1,
+      start: startFrame / fps,
+      end: endFrame / fps,
+      text,
+    });
+  }
+  return cues;
+}
+
+// Parse TTML/DFXP format to SrtCue
+export function parseTtml(text: string): SrtCue[] {
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!clean.trim()) return [];
+
+  // Extract frameRate from root tt element for SMPTE timing
+  const frameRateMatch = clean.match(/frameRate\s*=\s*["'](\d+)["']/);
+  const frameRate = frameRateMatch ? Number(frameRateMatch[1]) : 30;
+
+  const parseTtmlTs = (ts: string): number => {
+    if (!ts) return 0;
+    // HH:MM:SS.mmm or HH:MM:SS,mmm
+    const ms = ts.match(/^(\d+):(\d{2}):(\d{2})[.,](\d+)$/);
+    if (ms) {
+      const frac = ms[4].length <= 2 ? Number(ms[4]) * 10 : Number(ms[4]);
+      return Number(ms[1]) * 3600 + Number(ms[2]) * 60 + Number(ms[3]) + frac / 1000;
+    }
+    // HH:MM:SS:FF (SMPTE frames)
+    const smpte = ts.match(/^(\d+):(\d{2}):(\d{2}):(\d{2})$/);
+    if (smpte) {
+      return (
+        Number(smpte[1]) * 3600 +
+        Number(smpte[2]) * 60 +
+        Number(smpte[3]) +
+        Number(smpte[4]) / frameRate
+      );
+    }
+    return 0;
+  };
+
+  const cues: SrtCue[] = [];
+  // Match <p ...> elements; use a simple regex rather than a full XML parser
+  const pRe = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pRe.exec(clean)) !== null) {
+    const attrs = match[1];
+    const inner = match[2];
+
+    const beginM = attrs.match(/\bbegin\s*=\s*["']([^"']+)["']/);
+    const endM = attrs.match(/\bend\s*=\s*["']([^"']+)["']/);
+    if (!beginM || !endM) continue;
+
+    const start = parseTtmlTs(beginM[1]);
+    const end = parseTtmlTs(endM[1]);
+
+    // Strip XML tags; replace <br> variants with newline
+    const textRaw = inner
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .trim();
+    if (!textRaw) continue;
+
+    cues.push({ idx: cues.length + 1, start, end, text: textRaw });
+  }
+  return cues;
+}
+
 // Read with encoding detection and format checking
 
 const HEBREW_ENCODINGS = ['windows-1255', 'ISO-8859-8', 'ISO-8859-8-I', 'CP1255'];
@@ -343,6 +448,10 @@ export async function readSrtFile(
     cues = parseVtt(text);
   } else if (ext === '.ass' || ext === '.ssa') {
     cues = parseAss(text);
+  } else if (ext === '.sub') {
+    cues = parseSub(text);
+  } else if (ext === '.ttml' || ext === '.dfxp' || ext === '.xml') {
+    cues = parseTtml(text);
   } else {
     cues = parseSrt(text);
   }
