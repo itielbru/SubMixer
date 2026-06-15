@@ -41,6 +41,7 @@ import { joinPath } from './lib/path';
 import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
 import { useExportStore } from './state/exportStore';
+import { useAppEnvStore } from './state/appEnvStore';
 
 interface LogLine {
   time: string;
@@ -83,10 +84,15 @@ function AppContent({
     runBatch,
   } = useExport(onExportLog);
 
-  const [isWin, setIsWin] = useState(true);
-  const [appVer, setAppVer] = useState('');
-  const [ffLine, setFfLine] = useState('');
-  const [ffmpegOk, setFfmpegOk] = useState(true);
+  // ── App environment (Zustand store) ──────────────────────────────────────
+  const isWin = useAppEnvStore((s) => s.isWin);
+  const setIsWin = useAppEnvStore((s) => s.setIsWin);
+  const appVer = useAppEnvStore((s) => s.appVer);
+  const setAppVer = useAppEnvStore((s) => s.setAppVer);
+  const ffLine = useAppEnvStore((s) => s.ffLine);
+  const setFfLine = useAppEnvStore((s) => s.setFfLine);
+  const ffmpegOk = useAppEnvStore((s) => s.ffmpegOk);
+  const setFfmpegOk = useAppEnvStore((s) => s.setFfmpegOk);
 
   const [file, setFile] = useState<MediaFile | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -124,14 +130,12 @@ function AppContent({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [previewAudioId, setPreviewAudioId] = useState<number | null>(null);
 
-  const [peaks, setPeaks] = useState<{
-    min: Float32Array;
-    max: Float32Array;
-    peaksPerSec: number;
-    duration: number;
-  } | null>(null);
-  const [peaksLoading, setPeaksLoading] = useState(false);
-  const [peaksPct, setPeaksPct] = useState(0);
+  const peaks = useAppEnvStore((s) => s.peaks);
+  const setPeaks = useAppEnvStore((s) => s.setPeaks);
+  const peaksLoading = useAppEnvStore((s) => s.peaksLoading);
+  const setPeaksLoading = useAppEnvStore((s) => s.setPeaksLoading);
+  const peaksPct = useAppEnvStore((s) => s.peaksPct);
+  const setPeaksPct = useAppEnvStore((s) => s.setPeaksPct);
 
   const onPreviewError = useCallback(
     (msg?: string) => toast(msg || t('preview_error'), 'err'),
@@ -153,7 +157,8 @@ function AppContent({
     resetOnFileChange,
   } = usePreview(file, previewAudioId, onPreviewError);
 
-  const [history, setHistory] = useState<import('@shared/types').ExportRecord[]>([]);
+  const history = useAppEnvStore((s) => s.history);
+  const setHistory = useAppEnvStore((s) => s.setHistory);
 
   const [showOpen, setShowOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -317,7 +322,7 @@ function AppContent({
         else void window.api.project.clearAutosave();
       }
     })();
-  }, []);
+  }, [setIsWin, setAppVer, setFfLine, setFfmpegOk, setHistory]);
 
   // Autosave every 60s when a video is loaded
   useEffect(() => {
@@ -337,7 +342,7 @@ function AppContent({
 
   useEffect(() => {
     return window.api.peaks.onProgress((pct) => setPeaksPct(pct));
-  }, []);
+  }, [setPeaksPct]);
 
   // Auto-update lifecycle → non-blocking banner (packaged builds only).
   useEffect(() => {
@@ -682,7 +687,7 @@ function AppContent({
   const refreshHistory = useCallback(async () => {
     const h = await window.api.history.list();
     setHistory(h);
-  }, []);
+  }, [setHistory]);
 
   const loadFile = async (pathStr: string) => {
     pushUndo();
