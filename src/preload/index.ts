@@ -27,6 +27,7 @@ const api = {
   dialog: {
     openVideo: (): Promise<string | null> => ipcRenderer.invoke('dialog:openVideo'),
     openSrt: (): Promise<string[]> => ipcRenderer.invoke('dialog:openSrt'),
+    openMultipleVideos: (): Promise<string[]> => ipcRenderer.invoke('dialog:openMultipleVideos'),
     chooseFolder: (current?: string): Promise<string | null> =>
       ipcRenderer.invoke('dialog:chooseFolder', current),
     saveSrt: (defaultName?: string): Promise<string | null> =>

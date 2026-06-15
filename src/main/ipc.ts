@@ -249,6 +249,21 @@ export function registerIpc(): void {
     return result.filePaths[0];
   });
 
+  ipcMain.handle('dialog:openMultipleVideos', async (event) => {
+    const win = senderWindow(event);
+    const lang = (await getSettings()).lang;
+    const result = await dialog.showOpenDialog(win!, {
+      title: t(lang, 'dialog_video_title'),
+      filters: [
+        { name: 'Video', extensions: ['mkv', 'mp4', 'm4v', 'mov', 'avi', 'webm', 'ts'] },
+        { name: 'All files', extensions: ['*'] },
+      ],
+      properties: ['openFile', 'multiSelections'],
+    });
+    if (result.canceled) return [];
+    return result.filePaths;
+  });
+
   ipcMain.handle('dialog:openSrt', async (event) => {
     const win = senderWindow(event);
     const lang = (await getSettings()).lang;

@@ -1247,6 +1247,121 @@ function AppContent({
     toast(`${t('batch_added')}: ${outName}`, 'ok');
   };
 
+  const addMultipleVideosToBatch = async (): Promise<void> => {
+    if (!destFolder.trim()) {
+      toast(t('dest_folder_missing'), 'warn');
+      return;
+    }
+    const paths = await window.api.dialog.openMultipleVideos();
+    if (paths.length === 0) return;
+    toast(t('batch_probing'), 'info');
+    const newItems: BatchItem[] = [];
+    for (const vPath of paths) {
+      const r = await window.api.media.probe(vPath);
+      if (!r.ok || !r.file) {
+        toast(`${r.error ?? 'probe failed'}: ${vPath.split(/[/\\]/).pop()}`, 'err');
+        continue;
+      }
+      const vFile = r.file;
+      const stem = vFile.name.replace(/\.[^.]+$/, '');
+      const dir = vPath.includes('/')
+        ? vPath.slice(0, vPath.lastIndexOf('/'))
+        : vPath.slice(0, vPath.lastIndexOf('\\'));
+      const cont = container.toLowerCase() === 'mp4' ? 'mp4' : 'mkv';
+      const itemOutName = `${stem}.${cont}`;
+      const itemOutPath = joinPath(isWin, destFolder, itemOutName);
+
+      // Auto-detect matching subtitle in same directory
+      const subExts = ['srt', 'vtt', 'ass'];
+      const matchingSubPath = await (async () => {
+        for (const ext of subExts) {
+          const candidate = `${dir}${isWin ? '\\' : '/'}${stem}.${ext}`;
+          const exists = await window.api.fs.exists(candidate);
+          if (exists) return candidate;
+        }
+        return null;
+      })();
+
+      let matchingSub: { path: string; name: string } | null = null;
+      if (matchingSubPath) {
+        const subName = matchingSubPath.split(/[/\\]/).pop() ?? matchingSubPath;
+        const parsed = await window.api.srt.read(matchingSubPath);
+        if (parsed.ok) {
+          matchingSub = { path: matchingSubPath, name: subName };
+        }
+      }
+
+      const videoTrack = vFile.tracks.find((tr) => tr.kind === 'V') ?? null;
+      const audioTracks = vFile.tracks
+        .filter((tr) => tr.kind === 'A')
+        .map((tr) => ({
+          id: tr.id,
+          lang: tr.lang,
+          def: tr.def,
+          forced: tr.forced,
+          codecName: tr.codecName,
+        }));
+      const embeddedSubs = vFile.tracks
+        .filter((tr) => tr.kind === 'S')
+        .map((tr) => ({
+          id: tr.id,
+          lang: tr.lang,
+          def: tr.def,
+          forced: tr.forced,
+          codecName: tr.codecName,
+        }));
+
+      const extSubsForItem = matchingSub
+        ? [
+            {
+              path: matchingSub.path,
+              lang: 'und',
+              def: true,
+              forced: false,
+              offset: 0,
+              speed: 1,
+              trackName: matchingSub.name,
+              encoding: 'utf-8',
+            },
+          ]
+        : [];
+      const extForRun = matchingSub
+        ? [{ path: matchingSub.path, offset: 0, speed: 1, encoding: 'utf-8' }]
+        : [];
+
+      const plan: ExportPlan = {
+        inputFile: vPath,
+        externalSubs: extSubsForItem,
+        videoTrackId: videoTrack?.id ?? null,
+        audioTracks,
+        embeddedSubs,
+        outputPath: itemOutPath,
+        metadataTitle: stem,
+        container: cont,
+        burnInSubIndex: null,
+        encodePreset: settings.encodePreset,
+        encodeCrf: settings.encodeCrf,
+        burnInFontSize: settings.burnInFontSize,
+        burnInPrimaryColor: settings.burnInPrimaryColor,
+        burnInOutline: settings.burnInOutline,
+        mp4AudioBitrate: settings.mp4AudioBitrate,
+      };
+
+      newItems.push({
+        id: `${Date.now()}-${Math.random()}-${stem}`,
+        label: itemOutName,
+        plan,
+        durationSec: vFile.durationSec,
+        extSubs: extForRun,
+        status: 'pending',
+      });
+    }
+    if (newItems.length > 0) {
+      setBatchQueue((q) => [...q, ...newItems]);
+      toast(`${t('batch_added')}: ${newItems.length}`, 'ok');
+    }
+  };
+
   const runBatchQueue = async (): Promise<void> => {
     const pending = batchQueue.filter((x) => x.status === 'pending');
     await runBatch(pending, (idx, ok, cancelled, error) => {
@@ -1775,6 +1890,7 @@ function AppContent({
           exporting={exporting}
           onClose={() => setShowBatchQueue(false)}
           onRemove={(id) => setBatchQueue((q) => q.filter((x) => x.id !== id))}
+          onAddMultiple={() => void addMultipleVideosToBatch()}
           onRunAll={() => {
             setShowBatchQueue(false);
             void runBatchQueue();

@@ -364,6 +364,9 @@ export const translations = {
     batch_failed: '✗ נכשל',
     batch_running: 'מריץ…',
     batch_added: 'נוסף לתור',
+    batch_add_multiple: 'הוסף סרטונים…',
+    batch_add_multiple_tip: 'הוסף מספר קבצי וידאו לתור (כתוביות תואמות יאותרו אוטומטית)',
+    batch_probing: 'בודק קבצים…',
 
     diag_title: 'אבחון מערכת',
     diag_app_version: 'גרסת SubMixer',
@@ -768,6 +771,10 @@ export const translations = {
     batch_failed: '✗ Failed',
     batch_running: 'Running…',
     batch_added: 'Added to queue',
+    batch_add_multiple: 'Add Videos…',
+    batch_add_multiple_tip:
+      'Add multiple video files to the queue (matching subtitles auto-detected)',
+    batch_probing: 'Probing files…',
 
     diag_title: 'System Diagnostics',
     diag_app_version: 'SubMixer version',
