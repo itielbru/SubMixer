@@ -10,6 +10,9 @@ export const translations = {
     cancel: 'ביטול',
     close: 'סגור',
     error: 'שגיאה',
+    error_boundary_title: 'משהו השתבש',
+    error_boundary_desc: 'האפליקציה נתקלה בשגיאה בלתי צפויה. ניתן לטעון מחדש ולהמשיך.',
+    error_boundary_reload: 'טען מחדש',
     warning: 'אזהרה',
     success: 'הצלחה',
 
@@ -406,6 +409,9 @@ export const translations = {
     cancel: 'Cancel',
     close: 'Close',
     error: 'Error',
+    error_boundary_title: 'Something went wrong',
+    error_boundary_desc: 'The app hit an unexpected error. You can reload and continue.',
+    error_boundary_reload: 'Reload',
     warning: 'Warning',
     success: 'Success',
 

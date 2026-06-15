@@ -2689,3 +2689,44 @@ body {
   color: var(--text-2);
   font-size: 13px;
 }
+
+/* ERROR BOUNDARY FALLBACK */
+.err-boundary {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font), system-ui, sans-serif;
+  text-align: center;
+}
+.err-boundary-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+}
+.err-boundary-desc {
+  max-width: 520px;
+  opacity: 0.75;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.err-boundary-code {
+  max-width: 600px;
+  max-height: 160px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  color: var(--danger);
+  font-size: 12px;
+  text-align: left;
+  direction: ltr;
+  white-space: pre-wrap;
+  margin: 0;
+}
