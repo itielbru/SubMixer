@@ -160,6 +160,22 @@ export interface ProbeResult {
   error?: string;
 }
 
+export interface DiagnosticsInfo {
+  appVersion: string;
+  electronVersion: string;
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+  ffmpegAvailable: boolean;
+  ffmpegPath: string | null;
+  ffprobePath: string | null;
+  ffmpegVersion: string | null;
+  userDataPath: string;
+  previewCacheSizeBytes: number;
+  peaksCacheSizeBytes: number;
+  logSizeBytes: number;
+}
+
 export interface AddSubResult {
   ok: boolean;
   sub?: ExternalSub;

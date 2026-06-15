@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type {
   AppSettings,
+  DiagnosticsInfo,
   ProbeResult,
   AddSubResult,
   ExportPlan,
@@ -178,6 +179,10 @@ const api = {
       ipcRenderer.on('update:error', handler);
       return () => ipcRenderer.removeListener('update:error', handler);
     },
+  },
+
+  diagnostics: {
+    get: (): Promise<DiagnosticsInfo> => ipcRenderer.invoke('diagnostics:get'),
   },
 
   debug: {

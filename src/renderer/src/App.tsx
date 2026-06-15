@@ -28,6 +28,7 @@ import { FixCommonErrorsModal } from './components/modals/FixCommonErrorsModal';
 import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
 import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
+import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
@@ -155,6 +156,7 @@ function AppContent({
   >(null);
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -1124,6 +1126,7 @@ function AppContent({
       window.api.menu.on('menu:ffmpegCmd', ffmpegDlg),
       window.api.menu.on('menu:checkFFmpeg', checkFf),
       window.api.menu.on('menu:about', about),
+      window.api.menu.on('menu:diagnostics', () => setShowDiagnostics(true)),
     ];
     return () => unsubs.forEach((u) => u());
     // Register native-menu listeners once; handlers read fresh state via menuRef,
@@ -1502,6 +1505,8 @@ function AppContent({
           }
         />
       )}
+
+      {showDiagnostics && <DiagnosticsModal onClose={() => setShowDiagnostics(false)} />}
 
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>

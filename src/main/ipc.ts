@@ -42,6 +42,7 @@ import {
 } from './store';
 import type {
   AppSettings,
+  DiagnosticsInfo,
   ExportPlan,
   ProbeResult,
   AddSubResult,
@@ -59,6 +60,24 @@ function fmtSize(bytes: number): string {
   if (bytes >= 1024 ** 3) return (bytes / 1024 ** 3).toFixed(2) + ' GB';
   if (bytes >= 1024 ** 2) return (bytes / 1024 ** 2).toFixed(1) + ' MB';
   return (bytes / 1024).toFixed(1) + ' KB';
+}
+
+async function dirSize(dir: string): Promise<number> {
+  try {
+    const names = await fs.readdir(dir);
+    let total = 0;
+    for (const name of names) {
+      try {
+        const st = await fs.stat(path.join(dir, name));
+        if (st.isFile()) total += st.size;
+      } catch {
+        /* ignore */
+      }
+    }
+    return total;
+  } catch {
+    return 0;
+  }
 }
 
 function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
@@ -643,6 +662,27 @@ export function registerIpc(): void {
   // ── Auto-update controls ───────────────────────────────────────────────────
   ipcMain.handle('update:download', async () => downloadUpdate());
   ipcMain.handle('update:install', async () => installUpdate());
+
+  // ── Diagnostics ──────────────────────────────────────────────────────────
+  ipcMain.handle('diagnostics:get', async (): Promise<DiagnosticsInfo> => {
+    const ffStatus = await findBinaries();
+    const userData = userDataPath();
+    return {
+      appVersion: app.getVersion(),
+      electronVersion: process.versions.electron ?? '',
+      nodeVersion: process.versions.node ?? '',
+      platform: process.platform,
+      arch: process.arch,
+      ffmpegAvailable: ffStatus.available,
+      ffmpegPath: ffStatus.ffmpegPath,
+      ffprobePath: ffStatus.ffprobePath,
+      ffmpegVersion: ffStatus.version,
+      userDataPath: userData,
+      previewCacheSizeBytes: await dirSize(path.join(userData, 'temp', 'preview')),
+      peaksCacheSizeBytes: await dirSize(path.join(userData, 'peaks-cache')),
+      logSizeBytes: await dirSize(path.join(userData, 'logs')),
+    };
+  });
 }
 
 const MEDIA_MIME: Record<string, string> = {

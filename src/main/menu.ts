@@ -132,6 +132,10 @@ export function buildMenu(win: BrowserWindow, lang: 'he' | 'en' = 'he'): Menu {
         },
         { type: 'separator' },
         {
+          label: isHe ? 'אבחון מערכת…' : 'System Diagnostics…',
+          click: () => send('menu:diagnostics'),
+        },
+        {
           label: isHe ? 'אודות SubMixer' : 'About SubMixer',
           click: () => send('menu:about'),
         },
