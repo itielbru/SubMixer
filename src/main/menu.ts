@@ -132,6 +132,10 @@ export function buildMenu(win: BrowserWindow, lang: 'he' | 'en' = 'he'): Menu {
         },
         { type: 'separator' },
         {
+          label: isHe ? 'מה חדש…' : "What's New…",
+          click: () => send('menu:whatsnew'),
+        },
+        {
           label: isHe ? 'אבחון מערכת…' : 'System Diagnostics…',
           click: () => send('menu:diagnostics'),
         },

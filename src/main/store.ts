@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  lastSeenVersion: '',
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');

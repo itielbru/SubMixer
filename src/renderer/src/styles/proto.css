@@ -2666,3 +2666,26 @@ body {
 .proto .diag-err {
   color: var(--danger);
 }
+
+/* WHAT'S NEW MODAL */
+.proto .whatsnew-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.proto .whatsnew-item {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.proto .whatsnew-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+.proto .whatsnew-empty {
+  color: var(--text-2);
+  font-size: 13px;
+}

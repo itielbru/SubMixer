@@ -29,6 +29,7 @@ import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
 import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
 import { DiagnosticsModal } from './components/modals/DiagnosticsModal';
+import { WhatsNewModal } from './components/modals/WhatsNewModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
@@ -157,6 +158,7 @@ function AppContent({
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [whatsNewVersion, setWhatsNewVersion] = useState<string | null>(null);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -238,17 +240,23 @@ function AppContent({
   // ── bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
     void (async () => {
-      const [plat, ver, ff, hist] = await Promise.all([
+      const [plat, ver, ff, hist, s] = await Promise.all([
         window.api.app.platform(),
         window.api.app.version(),
         window.api.ffmpeg.status(),
         window.api.history.list(),
+        window.api.settings.get(),
       ]);
       setIsWin(plat === 'win32');
       setAppVer(ver);
       setFfLine(ff.version ? ff.version.replace(/^ffmpeg\s+/i, '').slice(0, 42) : '');
       setFfmpegOk(ff.available);
       setHistory(hist);
+      // Show "What's New" modal on first launch of a new version.
+      if (s.lastSeenVersion !== ver) {
+        setWhatsNewVersion(ver);
+        void window.api.settings.setOne('lastSeenVersion', ver);
+      }
     })();
   }, []);
 
@@ -1127,6 +1135,9 @@ function AppContent({
       window.api.menu.on('menu:checkFFmpeg', checkFf),
       window.api.menu.on('menu:about', about),
       window.api.menu.on('menu:diagnostics', () => setShowDiagnostics(true)),
+      window.api.menu.on('menu:whatsnew', () => {
+        void window.api.app.version().then((v) => setWhatsNewVersion(v));
+      }),
     ];
     return () => unsubs.forEach((u) => u());
     // Register native-menu listeners once; handlers read fresh state via menuRef,
@@ -1507,6 +1518,9 @@ function AppContent({
       )}
 
       {showDiagnostics && <DiagnosticsModal onClose={() => setShowDiagnostics(false)} />}
+      {whatsNewVersion && (
+        <WhatsNewModal version={whatsNewVersion} onClose={() => setWhatsNewVersion(null)} />
+      )}
 
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>

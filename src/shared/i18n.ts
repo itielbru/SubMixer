@@ -366,6 +366,10 @@ export const translations = {
     diag_copy: 'העתק הכל',
     diag_copied: 'הועתק',
     diag_not_available: 'לא זמין',
+
+    whatsnew_title: 'מה חדש',
+    whatsnew_no_notes: 'אין פרטים על גרסה זו.',
+    whatsnew_menu: 'מה חדש…',
   },
   en: {
     app_title: 'SubMixer',
@@ -732,6 +736,10 @@ export const translations = {
     diag_copy: 'Copy all',
     diag_copied: 'Copied',
     diag_not_available: 'N/A',
+
+    whatsnew_title: "What's New",
+    whatsnew_no_notes: 'No notes available for this version.',
+    whatsnew_menu: "What's New…",
   },
 } as const;
 

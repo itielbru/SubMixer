@@ -143,6 +143,8 @@ export interface AppSettings {
   subPosition: 'bottom' | 'top';
   /** Burn the active external subtitle into the video on export (re-encodes). */
   burnInSubs: boolean;
+  /** Last version the user saw in the "What's New" modal; empty string on first run. */
+  lastSeenVersion: string;
 }
 
 export type SubStyleMode = 'outline' | 'box' | 'none';

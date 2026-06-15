@@ -21,6 +21,7 @@ const DEFAULT: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  lastSeenVersion: '',
 };
 
 export function useSettings(): [
