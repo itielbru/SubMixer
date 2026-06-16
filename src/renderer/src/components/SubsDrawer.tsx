@@ -46,21 +46,25 @@ export function SubsDrawer({
     setDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
-    if (!onDropFiles) return;
-    const paths = Array.from(e.dataTransfer.files)
-      .filter((f) => /\.(srt|vtt|ass|ssa)$/i.test((f as unknown as { path: string }).path || f.name))
-      .map((f) => (f as unknown as { path: string }).path)
-      .filter(Boolean);
-    if (paths.length > 0) onDropFiles(paths);
-  }, [onDropFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(false);
+      if (!onDropFiles) return;
+      const paths = Array.from(e.dataTransfer.files)
+        .filter((f) =>
+          /\.(srt|vtt|ass|ssa)$/i.test((f as unknown as { path: string }).path || f.name),
+        )
+        .map((f) => (f as unknown as { path: string }).path)
+        .filter(Boolean);
+      if (paths.length > 0) onDropFiles(paths);
+    },
+    [onDropFiles],
+  );
   const sub = extSubs.find((s) => s.id === activeSubId);
 
-  const globalActive =
-    sub && (Math.abs(sub.offset) > 1e-6 || Math.abs(sub.speed - 1) > 1e-5);
+  const globalActive = sub && (Math.abs(sub.offset) > 1e-6 || Math.abs(sub.speed - 1) > 1e-5);
 
   return (
     <aside className="col-right">
@@ -83,9 +87,7 @@ export function SubsDrawer({
             className={`ext-item ${s.id === activeSubId ? 'active' : ''}`}
             onClick={() => onSelectSub(s.id)}
           >
-            <span className="tag tag-sub">
-              {s.name.split('.').pop()?.toUpperCase() || 'SRT'}
-            </span>
+            <span className="tag tag-sub">{s.name.split('.').pop()?.toUpperCase() || 'SRT'}</span>
             <div className="ext-i">
               <div className="ext-n">{s.name}</div>
               <div className="ext-m mono">
@@ -135,9 +137,7 @@ export function SubsDrawer({
                 <span className="sync-status-k">{t('knob_speed')}:</span>
                 <span>{sub.speed.toFixed(4)}x</span>
               </div>
-              {fileEdited && (
-                <div className="sync-status-badge">{t('file_edited_badge')}</div>
-              )}
+              {fileEdited && <div className="sync-status-badge">{t('file_edited_badge')}</div>}
             </div>
             <button
               className="btn ghost compact sync-reset-btn"
@@ -150,11 +150,7 @@ export function SubsDrawer({
             </button>
           </div>
 
-          <button
-            className="btn primary compact full-width"
-            type="button"
-            onClick={onVisualSync}
-          >
+          <button className="btn primary compact full-width" type="button" onClick={onVisualSync}>
             {t('visual_sync_btn')}
           </button>
 
@@ -290,4 +286,3 @@ export function SubsDrawer({
     </aside>
   );
 }
-

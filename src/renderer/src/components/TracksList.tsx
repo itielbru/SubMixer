@@ -133,7 +133,13 @@ export function TracksList({
       </div>
 
       <div className="tracks-body" role="list">
-        {visible.length === 0 ? (
+        {tracks.length === 0 && extSubs.length === 0 ? (
+          <div className="onboard-empty">
+            <div className="onboard-icon">📁</div>
+            <div className="onboard-hint">{t('onboard_drop_video')}</div>
+            <div className="onboard-sub">{t('onboard_then_subs')}</div>
+          </div>
+        ) : visible.length === 0 ? (
           <div className="empty">{t('no_tracks')}</div>
         ) : (
           visible.map((tr) => {

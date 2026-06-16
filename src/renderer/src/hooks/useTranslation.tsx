@@ -17,7 +17,7 @@ export function I18nProvider({ lang, children }: { lang: Lang; children: React.R
       lang,
       t: (key: I18nKey) => translate(lang, key),
     }),
-    [lang]
+    [lang],
   );
 
   useEffect(() => {
@@ -28,6 +28,8 @@ export function I18nProvider({ lang, children }: { lang: Lang; children: React.R
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
+// The translation hook lives beside its provider by design.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useT(): I18nContextValue {
   return useContext(I18nContext);
 }

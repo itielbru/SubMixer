@@ -6,26 +6,19 @@ import { Modal } from '../ui/Modal';
 interface Props {
   cueCount: number;
   selectedCueIdx: number;
-  onApply: (deltaMs: number, fromIdx: number) => void;
+  onApply: (deltaSec: number, fromIdx: number, speed: number) => void;
   onClose: () => void;
 }
 
-export function AdjustAllTimesModal({
-  cueCount,
-  selectedCueIdx,
-  onApply,
-  onClose,
-}: Props) {
+export function AdjustAllTimesModal({ cueCount, selectedCueIdx, onApply, onClose }: Props) {
   const { t } = useT();
   const [ms, setMs] = useState(0);
+  const [speed, setSpeed] = useState(1);
   const [partial, setPartial] = useState(false);
-  const [fromIdx, setFromIdx] = useState(() =>
-    selectedCueIdx >= 0 ? selectedCueIdx : 0
-  );
+  const [fromIdx, setFromIdx] = useState(() => (selectedCueIdx >= 0 ? selectedCueIdx : 0));
 
   const apply = (): void => {
-    const deltaSec = ms / 1000;
-    onApply(deltaSec, partial ? fromIdx : 0);
+    onApply(ms / 1000, partial ? fromIdx : 0, speed);
     onClose();
   };
 
@@ -33,7 +26,7 @@ export function AdjustAllTimesModal({
     <Modal onClose={onClose} label={t('adjust_all_times_title')}>
       <div className="modal-h">
         <div className="modal-t">{t('adjust_all_times_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>
@@ -66,11 +59,53 @@ export function AdjustAllTimesModal({
           </button>
         </div>
 
-        <label className="cb mt12">
-          <span
-            className={`cb-box ${partial ? 'on' : ''}`}
-            onClick={() => setPartial((p) => !p)}
+        <label className="field" style={{ marginTop: 14 }}>
+          <span>{t('adjust_all_speed')}</span>
+          <input
+            type="number"
+            min={0.5}
+            max={2}
+            step={0.01}
+            value={speed}
+            onChange={(e) => setSpeed(Math.min(2, Math.max(0.5, Number(e.target.value) || 1)))}
+          />
+        </label>
+        <div className="quick-row">
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.max(0.5, Math.round((v - 0.05) * 100) / 100))}
           >
+            −5%
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.max(0.5, Math.round((v - 0.01) * 100) / 100))}
+          >
+            −1%
+          </button>
+          <button className="btn ghost compact" type="button" onClick={() => setSpeed(1)}>
+            1×
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.min(2, Math.round((v + 0.01) * 100) / 100))}
+          >
+            +1%
+          </button>
+          <button
+            className="btn ghost compact"
+            type="button"
+            onClick={() => setSpeed((v) => Math.min(2, Math.round((v + 0.05) * 100) / 100))}
+          >
+            +5%
+          </button>
+        </div>
+
+        <label className="cb mt12">
+          <span className={`cb-box ${partial ? 'on' : ''}`} onClick={() => setPartial((p) => !p)}>
             {partial && <Ico d={I.check} size={10} />}
           </span>
           <span onClick={() => setPartial((p) => !p)}>{t('adjust_all_times_partial')}</span>
@@ -79,10 +114,7 @@ export function AdjustAllTimesModal({
         {partial && (
           <label className="field">
             <span>{t('adjust_all_times_from_cue')}</span>
-            <select
-              value={fromIdx}
-              onChange={(e) => setFromIdx(Number(e.target.value))}
-            >
+            <select value={fromIdx} onChange={(e) => setFromIdx(Number(e.target.value))}>
               {Array.from({ length: cueCount }, (_, i) => (
                 <option key={i} value={i}>
                   #{i + 1}

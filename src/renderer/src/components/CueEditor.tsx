@@ -47,7 +47,10 @@ export function CueEditor({
       const newStart = Math.max(prev ? prev.end : 0, Math.min(cue.end - minDur, cue.start + delta));
       onUpdateCue(selectedIdx, { start: newStart });
     } else if (target === 'end') {
-      const newEnd = Math.max(cue.start + minDur, Math.min(next ? next.start : Infinity, cue.end + delta));
+      const newEnd = Math.max(
+        cue.start + minDur,
+        Math.min(next ? next.start : Infinity, cue.end + delta),
+      );
       onUpdateCue(selectedIdx, { end: newEnd });
     } else {
       const span = cue.end - cue.start;
@@ -184,20 +187,36 @@ export function CueEditor({
           <span className="ce-label">התחלה</span>
           <span className="ce-time mono">{fmtTimeMs(cue.start)}</span>
           <div className="ce-nudges">
-            <button className="nudge" type="button" onClick={() => nudge('start', -NUDGE_BIG)}>−50</button>
-            <button className="nudge" type="button" onClick={() => nudge('start', -NUDGE_SMALL)}>−10</button>
-            <button className="nudge" type="button" onClick={() => nudge('start', NUDGE_SMALL)}>+10</button>
-            <button className="nudge" type="button" onClick={() => nudge('start', NUDGE_BIG)}>+50</button>
+            <button className="nudge" type="button" onClick={() => nudge('start', -NUDGE_BIG)}>
+              −50
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('start', -NUDGE_SMALL)}>
+              −10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('start', NUDGE_SMALL)}>
+              +10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('start', NUDGE_BIG)}>
+              +50
+            </button>
           </div>
         </div>
         <div className="ce-row">
           <span className="ce-label">סיום</span>
           <span className="ce-time mono">{fmtTimeMs(cue.end)}</span>
           <div className="ce-nudges">
-            <button className="nudge" type="button" onClick={() => nudge('end', -NUDGE_BIG)}>−50</button>
-            <button className="nudge" type="button" onClick={() => nudge('end', -NUDGE_SMALL)}>−10</button>
-            <button className="nudge" type="button" onClick={() => nudge('end', NUDGE_SMALL)}>+10</button>
-            <button className="nudge" type="button" onClick={() => nudge('end', NUDGE_BIG)}>+50</button>
+            <button className="nudge" type="button" onClick={() => nudge('end', -NUDGE_BIG)}>
+              −50
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('end', -NUDGE_SMALL)}>
+              −10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('end', NUDGE_SMALL)}>
+              +10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('end', NUDGE_BIG)}>
+              +50
+            </button>
           </div>
         </div>
         <div className="ce-row">
@@ -206,10 +225,18 @@ export function CueEditor({
             {(cue.end - cue.start).toFixed(2)}s · {w.cps > 0 ? w.cps.toFixed(0) : '—'} CPS
           </span>
           <div className="ce-nudges">
-            <button className="nudge" type="button" onClick={() => nudge('both', -NUDGE_BIG)}>−50</button>
-            <button className="nudge" type="button" onClick={() => nudge('both', -NUDGE_SMALL)}>−10</button>
-            <button className="nudge" type="button" onClick={() => nudge('both', NUDGE_SMALL)}>+10</button>
-            <button className="nudge" type="button" onClick={() => nudge('both', NUDGE_BIG)}>+50</button>
+            <button className="nudge" type="button" onClick={() => nudge('both', -NUDGE_BIG)}>
+              −50
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('both', -NUDGE_SMALL)}>
+              −10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('both', NUDGE_SMALL)}>
+              +10
+            </button>
+            <button className="nudge" type="button" onClick={() => nudge('both', NUDGE_BIG)}>
+              +50
+            </button>
           </div>
         </div>
       </div>

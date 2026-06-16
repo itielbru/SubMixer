@@ -58,7 +58,9 @@ export async function loadCached(filePath: string, trackIndex: number): Promise<
     if (buf.byteLength < need) return null;
     // Float32Array views must be 4-byte aligned. Copy to a fresh buffer.
     const copy = new ArrayBuffer(length * 2 * 4);
-    new Uint8Array(copy).set(new Uint8Array(buf.buffer, buf.byteOffset + HEADER_SIZE, length * 2 * 4));
+    new Uint8Array(copy).set(
+      new Uint8Array(buf.buffer, buf.byteOffset + HEADER_SIZE, length * 2 * 4),
+    );
     const min = new Float32Array(copy, 0, length);
     const max = new Float32Array(copy, length * 4, length);
     return { peaksPerSec, durationSec, min, max };
@@ -70,7 +72,7 @@ export async function loadCached(filePath: string, trackIndex: number): Promise<
 export async function saveCached(
   filePath: string,
   trackIndex: number,
-  entry: PeaksEntry
+  entry: PeaksEntry,
 ): Promise<void> {
   try {
     await fs.mkdir(cacheDir(), { recursive: true });
@@ -86,7 +88,10 @@ export async function saveCached(
     dv.setUint32(20, length, true);
     // Write min then max as contiguous f32 blocks.
     Buffer.from(entry.min.buffer, entry.min.byteOffset, length * 4).copy(buf, HEADER_SIZE);
-    Buffer.from(entry.max.buffer, entry.max.byteOffset, length * 4).copy(buf, HEADER_SIZE + length * 4);
+    Buffer.from(entry.max.buffer, entry.max.byteOffset, length * 4).copy(
+      buf,
+      HEADER_SIZE + length * 4,
+    );
     await fs.writeFile(file, buf);
   } catch {
     // best-effort cache; ignore failures

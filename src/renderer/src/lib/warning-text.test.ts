@@ -41,4 +41,25 @@ describe('warningReasonText', () => {
     expect(warningReasonText(w, en)).toBe('Cue extends past video end');
     expect(warningReasonText(w, he)).toBe('Cue חורג מעבר לסוף הסרט');
   });
+
+  it('appends the rounded CPS value for a very-fast cue', () => {
+    // 40 chars in 1s → cps 40 > hardMaxCps (35) → veryFastCps
+    const w = computeWarnings(cue(0, 1, 'x'.repeat(40)), undefined, undefined);
+    expect(w.reasonKey).toBe('veryFastCps');
+    expect(warningReasonText(w, en)).toBe('Very high CPS (40)');
+  });
+
+  it('appends the duration for a long cue', () => {
+    // 10s duration > maxCueDurationSec (8), low CPS → long
+    const w = computeWarnings(cue(0, 10, 'short text'), undefined, undefined);
+    expect(w.reasonKey).toBe('long');
+    expect(warningReasonText(w, en)).toBe('Too long (10.0s)');
+  });
+
+  it('localizes the short-gap reason', () => {
+    // 0.05s gap after prev (< minGapSec 0.12), no overlap, normal duration/CPS
+    const w = computeWarnings(cue(5.05, 8, 'ok text'), cue(0, 5), undefined);
+    expect(w.reasonKey).toBe('shortGap');
+    expect(warningReasonText(w, he)).toBe(he('warn_short_gap'));
+  });
 });

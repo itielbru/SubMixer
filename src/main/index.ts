@@ -36,7 +36,9 @@ async function createWindow(): Promise<void> {
     icon: join(__dirname, '../../build/icon.ico'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      // The preload uses only ipcRenderer + contextBridge (both sandbox-safe),
+      // so we run the renderer in a sandbox for defence-in-depth.
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -47,7 +49,14 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    try {
+      const { protocol } = new URL(details.url);
+      if (protocol === 'https:' || protocol === 'http:') {
+        shell.openExternal(details.url).catch(() => {});
+      }
+    } catch {
+      // ignore malformed URLs
+    }
     return { action: 'deny' };
   });
 
@@ -91,7 +100,11 @@ app.whenReady().then(async () => {
           title: t(lang, 'ffmpeg_missing_title'),
           message: t(lang, 'ffmpeg_missing_msg'),
           detail: t(lang, 'ffmpeg_missing_detail'),
-          buttons: [t(lang, 'btn_download_site'), t(lang, 'btn_continue_without'), t(lang, 'btn_exit')],
+          buttons: [
+            t(lang, 'btn_download_site'),
+            t(lang, 'btn_continue_without'),
+            t(lang, 'btn_exit'),
+          ],
           defaultId: 0,
           cancelId: 1,
         });

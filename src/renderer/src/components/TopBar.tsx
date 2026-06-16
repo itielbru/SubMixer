@@ -38,7 +38,9 @@ export function TopBar({
         <div className="mark">S</div>
         <div className="brand-txt">
           <div className="name">{t('app_title')}</div>
-          <div className="ver">{appVersion} · {ffVersion || 'FFmpeg —'}</div>
+          <div className="ver">
+            {appVersion} · {ffVersion || 'FFmpeg —'}
+          </div>
         </div>
       </div>
       <button className="btn ghost" onClick={onOpenFile}>

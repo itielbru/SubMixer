@@ -10,7 +10,7 @@ export const ACCENTS: Record<AppSettings['accent'], { name: string; hex: string 
 
 export function applyTheme(
   s: Pick<AppSettings, 'theme' | 'accent' | 'font'>,
-  resolvedTheme?: 'dark' | 'light'
+  resolvedTheme?: 'dark' | 'light',
 ): void {
   const a = ACCENTS[s.accent] || ACCENTS.indigo;
   const root = document.documentElement;

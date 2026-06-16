@@ -20,10 +20,19 @@ interface Props {
   onRemove: (id: string) => void;
   onRunAll: () => void;
   onClearDone: () => void;
+  onAddMultiple?: () => void;
   onClose: () => void;
 }
 
-export function BatchQueueModal({ items, exporting, onRemove, onRunAll, onClearDone, onClose }: Props) {
+export function BatchQueueModal({
+  items,
+  exporting,
+  onRemove,
+  onRunAll,
+  onClearDone,
+  onAddMultiple,
+  onClose,
+}: Props) {
   const { t } = useT();
   const hasPending = items.some((x) => x.status === 'pending');
   const hasDone = items.some((x) => x.status === 'done' || x.status === 'failed');
@@ -32,13 +41,24 @@ export function BatchQueueModal({ items, exporting, onRemove, onRunAll, onClearD
     <Modal onClose={onClose} label={t('batch_queue_title')}>
       <div className="modal-h">
         <div className="modal-t">{t('batch_queue_title')}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onAddMultiple && (
+            <button
+              className="btn ghost compact"
+              type="button"
+              onClick={onAddMultiple}
+              disabled={exporting}
+              title={t('batch_add_multiple_tip')}
+            >
+              {t('batch_add_multiple')}
+            </button>
+          )}
           {hasDone && (
             <button className="btn ghost compact" type="button" onClick={onClearDone}>
               <Ico d={I.trash} size={12} /> {t('history_clear_btn')}
             </button>
           )}
-          <button className="icon-btn" type="button" onClick={onClose}>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
             <Ico d={I.x} />
           </button>
         </div>

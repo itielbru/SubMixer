@@ -10,12 +10,20 @@ const PREVIEW_CACHE_MAX = 500 * 1024 * 1024; // 500 MB (extracted audio previews
 const PEAKS_CACHE_MAX = 200 * 1024 * 1024; // 200 MB (waveform peaks)
 const PEAKS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
+/** A missing directory is expected (cache not created yet); anything else is worth logging. */
+function logReaddirError(dir: string, err: unknown): void {
+  const e = err as NodeJS.ErrnoException;
+  if (e?.code === 'ENOENT') return; // cache dir not created yet — normal
+  log.warn('Cache maintenance could not read directory', { dir, error: e?.message ?? String(err) });
+}
+
 /** Delete cache files older than `maxAgeMs` (by whichever of mtime/atime is more recent). */
 export async function evictByAge(dir: string, maxAgeMs: number): Promise<void> {
   let names: string[];
   try {
     names = await fs.readdir(dir);
-  } catch {
+  } catch (err) {
+    logReaddirError(dir, err);
     return;
   }
   const cutoff = Date.now() - maxAgeMs;
@@ -37,12 +45,13 @@ export async function evictByAge(dir: string, maxAgeMs: number): Promise<void> {
 }
 
 /** Delete oldest files in `dir` until its total size is under `maxBytes`. */
-async function enforceCacheQuota(dir: string, maxBytes: number): Promise<void> {
+export async function enforceCacheQuota(dir: string, maxBytes: number): Promise<void> {
   let names: string[];
   try {
     names = await fs.readdir(dir);
-  } catch {
-    return; // dir not created yet
+  } catch (err) {
+    logReaddirError(dir, err);
+    return;
   }
 
   const files: { full: string; size: number; mtime: number }[] = [];

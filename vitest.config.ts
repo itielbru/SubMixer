@@ -21,8 +21,30 @@ export default defineConfig({
         'src/renderer/src/lib/**',
         'src/main/srt.ts',
         'src/main/peaks-cache.ts',
+        'src/main/maintenance.ts',
+      ],
+      // Exclude type-only / barrel files and browser-only utilities (DOM/canvas/
+      // JSX) that require a jsdom environment we don't run. The gate therefore
+      // reflects the pure, node-testable surface.
+      exclude: [
+        'src/shared/types.ts',
+        'src/shared/preview.ts',
+        'src/shared/agent-debug.ts',
+        'src/renderer/src/lib/theme.ts',
+        'src/renderer/src/lib/waveform.ts',
+        'src/renderer/src/lib/sub-format.tsx',
+        'src/renderer/src/lib/notify.ts',
+        'src/renderer/src/lib/path.ts',
       ],
       reporter: ['text', 'html'],
+      // Guard the pure, well-tested core. Raise as more logic is extracted into
+      // pure modules (see Sprint 4).
+      thresholds: {
+        lines: 80,
+        functions: 78,
+        branches: 68,
+        statements: 76,
+      },
     },
   },
 });

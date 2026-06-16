@@ -25,9 +25,7 @@ export function Modal({ onClose, label, children, className }: Props) {
       return;
     }
     if (e.key !== 'Tab') return;
-    const focusable = Array.from(
-      dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []
-    );
+    const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
     if (focusable.length === 0) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];

@@ -64,7 +64,8 @@ export function BottomBar({
           onClick={onOpenQueue}
           title={t('batch_queue_title')}
         >
-          {t('batch_queue_btn')}{batchCount > 0 ? ` (${batchCount})` : ''}
+          {t('batch_queue_btn')}
+          {batchCount > 0 ? ` (${batchCount})` : ''}
         </button>
       </div>
 
@@ -105,7 +106,13 @@ export function BottomBar({
             >
               + {t('batch_queue_btn')}
             </button>
-            <button className="btn primary" type="button" onClick={onExport} disabled={!canExport} data-testid="export-btn">
+            <button
+              className="btn primary"
+              type="button"
+              onClick={onExport}
+              disabled={!canExport}
+              data-testid="export-btn"
+            >
               <Ico d={I.zap} size={13} /> {t('export_btn')}
             </button>
           </>

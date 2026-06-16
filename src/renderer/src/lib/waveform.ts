@@ -17,7 +17,9 @@ const PEAKS_PER_SEC = 100;
 let sharedCtx: AudioContext | null = null;
 function getCtx(): AudioContext {
   if (!sharedCtx) {
-    const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     sharedCtx = new Ctor();
   }
   return sharedCtx;
@@ -26,7 +28,10 @@ function getCtx(): AudioContext {
 /** Browser-side fallback: decode an audio URL via WebAudio. Used only when
  *  the main-process PCM extraction path isn't available (e.g. legacy
  *  audio-only previews). Otherwise prefer `window.api.peaks.get`. */
-export async function decodePeaks(url: string, onProgress?: (pct: number) => void): Promise<PeaksResult> {
+export async function decodePeaks(
+  url: string,
+  onProgress?: (pct: number) => void,
+): Promise<PeaksResult> {
   onProgress?.(5);
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`fetch failed: ${resp.status}`);
@@ -46,7 +51,8 @@ export async function decodePeaks(url: string, onProgress?: (pct: number) => voi
   for (let i = 0; i < total; i++) {
     const start = i * samplesPerBin;
     const end = Math.min(start + samplesPerBin, audio.length);
-    let mn = 1, mx = -1;
+    let mn = 1,
+      mx = -1;
     for (let s = start; s < end; s++) {
       let v = 0;
       for (let c = 0; c < channels; c++) v += data[c][s];
@@ -65,7 +71,7 @@ export async function decodePeaks(url: string, onProgress?: (pct: number) => voi
 export function nearestVolumePeakTime(
   t: number,
   peaks: { min: Float32Array; max: Float32Array; peaksPerSec: number },
-  windowSec = 0.05
+  windowSec = 0.05,
 ): number {
   const pps = peaks.peaksPerSec;
   const center = Math.round(t * pps);

@@ -33,8 +33,22 @@ type Drag =
   | { mode: 'seek' }
   | { mode: 'pan'; startX: number; startView: [number, number] }
   | { mode: 'move'; idx: number; startX: number; origStart: number; origEnd: number }
-  | { mode: 'resize-l'; idx: number; startX: number; origStart: number; minBound: number; maxBound: number }
-  | { mode: 'resize-r'; idx: number; startX: number; origEnd: number; minBound: number; maxBound: number };
+  | {
+      mode: 'resize-l';
+      idx: number;
+      startX: number;
+      origStart: number;
+      minBound: number;
+      maxBound: number;
+    }
+  | {
+      mode: 'resize-r';
+      idx: number;
+      startX: number;
+      origEnd: number;
+      minBound: number;
+      maxBound: number;
+    };
 
 const HANDLE_PX = 6;
 const CUE_BLOCK_H = 28;
@@ -127,11 +141,11 @@ export function Timeline({
   // ── coord helpers ─────────────────────────────────────────────────────────
   const tToX = useCallback(
     (t: number) => ((t - view[0]) / (view[1] - view[0])) * size.w,
-    [view, size.w]
+    [view, size.w],
   );
   const xToT = useCallback(
     (x: number) => view[0] + (x / size.w) * (view[1] - view[0]),
-    [view, size.w]
+    [view, size.w],
   );
 
   // ── hit testing ───────────────────────────────────────────────────────────
@@ -152,7 +166,7 @@ export function Timeline({
       }
       return null;
     },
-    [cues, tToX, size.h, size.w]
+    [cues, tToX, size.h, size.w],
   );
 
   // ── drawing ───────────────────────────────────────────────────────────────
@@ -338,7 +352,21 @@ export function Timeline({
       ctx.closePath();
       ctx.fill();
     }
-  }, [cues, currentT, loading, loadingPct, peaks, selectedIdx, size.h, size.w, snapLine, tToX, view, t]);
+  }, [
+    cues,
+    currentT,
+    loading,
+    loadingPct,
+    peaks,
+    selectedIdx,
+    size.h,
+    size.w,
+    snapLine,
+    tToX,
+    view,
+    t,
+    warnThresholds,
+  ]);
 
   useEffect(() => {
     draw();
@@ -411,11 +439,7 @@ export function Timeline({
     if (!d) {
       const hit = hitCue(x, y);
       hoverRef.current = hit;
-      c.style.cursor = hit
-        ? hit.zone === 'mid'
-          ? 'grab'
-          : 'ew-resize'
-        : 'crosshair';
+      c.style.cursor = hit ? (hit.zone === 'mid' ? 'grab' : 'ew-resize') : 'crosshair';
       return;
     }
 
@@ -598,6 +622,31 @@ export function Timeline({
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedIdx, onDelete]);
 
+  // Arrow-key nudge/extend when the canvas is focused (a11y keyboard fallback).
+  const NUDGE = 0.1;
+  const onCanvasKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+      if (selectedIdx < 0) return;
+      const cue = cues[selectedIdx];
+      if (!cue) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const delta = e.key === 'ArrowRight' ? NUDGE : -NUDGE;
+        if (e.shiftKey) {
+          // Extend/shrink end
+          const newEnd = Math.max(cue.start + MIN_DUR, cue.end + delta);
+          onUpdateCue(selectedIdx, { end: newEnd });
+        } else {
+          // Move whole cue
+          const newStart = Math.max(0, cue.start + delta);
+          const dur = cue.end - cue.start;
+          onUpdateCue(selectedIdx, { start: newStart, end: newStart + dur });
+        }
+      }
+    },
+    [selectedIdx, cues, onUpdateCue],
+  );
+
   // Toolbar: zoom in/out/fit
   const zoom = (factor: number) => {
     const span = view[1] - view[0];
@@ -635,15 +684,17 @@ export function Timeline({
     setView([s, eN]);
   };
 
-  const viewLabel = useMemo(
-    () => `${fmtTime(view[0])} — ${fmtTime(view[1])}`,
-    [view]
-  );
+  const viewLabel = useMemo(() => `${fmtTime(view[0])} — ${fmtTime(view[1])}`, [view]);
 
   return (
     <div className="tl" dir="ltr">
       <div className="tl-toolbar">
-        <button className="tl-btn" type="button" onClick={() => zoom(1 / 1.5)} title={t('tl_zoom_in')}>
+        <button
+          className="tl-btn"
+          type="button"
+          onClick={() => zoom(1 / 1.5)}
+          title={t('tl_zoom_in')}
+        >
           +
         </button>
         <button className="tl-btn" type="button" onClick={() => zoom(1.5)} title={t('tl_zoom_out')}>
@@ -674,11 +725,15 @@ export function Timeline({
         <canvas
           ref={canvasRef}
           style={{ width: '100%', height: '100%', display: 'block' }}
+          tabIndex={0}
+          role="application"
+          aria-label={t('tl_aria_label')}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onWheel={onWheel}
+          onKeyDown={onCanvasKeyDown}
         />
       </div>
     </div>
@@ -702,7 +757,11 @@ function withAlpha(color: string, a: number): string {
   const m = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!m) return color;
   let h = m[1];
-  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 3)
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);

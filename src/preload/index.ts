@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type {
   AppSettings,
+  DiagnosticsInfo,
+  ProjectData,
   ProbeResult,
   AddSubResult,
   ExportPlan,
@@ -13,20 +15,19 @@ import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from 
 
 const api = {
   ffmpeg: {
-    status: (force = false): Promise<FFmpegStatus> =>
-      ipcRenderer.invoke('ffmpeg:status', force),
+    status: (force = false): Promise<FFmpegStatus> => ipcRenderer.invoke('ffmpeg:status', force),
     openInstallPage: (): Promise<void> => ipcRenderer.invoke('ffmpeg:openInstallPage'),
   },
 
   media: {
     probe: (filePath: string): Promise<ProbeResult> => ipcRenderer.invoke('media:probe', filePath),
-    url: (filePath: string): string =>
-      `submixer://media?path=${encodeURIComponent(filePath)}`,
+    url: (filePath: string): string => `submixer://media?path=${encodeURIComponent(filePath)}`,
   },
 
   dialog: {
     openVideo: (): Promise<string | null> => ipcRenderer.invoke('dialog:openVideo'),
     openSrt: (): Promise<string[]> => ipcRenderer.invoke('dialog:openSrt'),
+    openMultipleVideos: (): Promise<string[]> => ipcRenderer.invoke('dialog:openMultipleVideos'),
     chooseFolder: (current?: string): Promise<string | null> =>
       ipcRenderer.invoke('dialog:chooseFolder', current),
     saveSrt: (defaultName?: string): Promise<string | null> =>
@@ -35,19 +36,25 @@ const api = {
 
   srt: {
     add: (filePath: string): Promise<AddSubResult> => ipcRenderer.invoke('srt:add', filePath),
-    read: (filePath: string): Promise<{ ok: boolean; cues?: SrtCue[]; encoding?: string; size?: number; error?: string }> =>
-      ipcRenderer.invoke('srt:read', filePath),
+    read: (
+      filePath: string,
+    ): Promise<{
+      ok: boolean;
+      cues?: SrtCue[];
+      encoding?: string;
+      size?: number;
+      error?: string;
+    }> => ipcRenderer.invoke('srt:read', filePath),
     save: (args: {
       sourcePath: string;
       destPath: string;
       offset: number;
       speed: number;
       encoding?: string;
-    }): Promise<{ ok: boolean; error?: string }> =>
-      ipcRenderer.invoke('srt:save', args),
+    }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('srt:save', args),
     writeCues: (
       cues: SrtCue[],
-      baseName: string
+      baseName: string,
     ): Promise<{ ok: boolean; path?: string; error?: string }> =>
       ipcRenderer.invoke('srt:writeCues', cues, baseName),
   },
@@ -57,7 +64,7 @@ const api = {
       filePath: string,
       trackIndex: number,
       durationSec: number,
-      phase: PreviewExtractPhase = 'full'
+      phase: PreviewExtractPhase = 'full',
     ): Promise<PreviewExtractResult> =>
       ipcRenderer.invoke('preview:extract', { filePath, trackIndex, durationSec, phase }),
     onProgress: (cb: (p: PreviewProgress) => void): (() => void) => {
@@ -71,7 +78,7 @@ const api = {
     get: (
       filePath: string,
       trackIndex: number,
-      durationSec: number
+      durationSec: number,
     ): Promise<{
       ok: boolean;
       fromCache?: boolean;
@@ -92,12 +99,11 @@ const api = {
     run: (
       plan: ExportPlan,
       durationSec: number,
-      externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
+      externalSubs: { path: string; offset: number; speed: number; encoding?: string }[],
     ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> =>
       ipcRenderer.invoke('export:run', plan, durationSec, externalSubs),
     cancel: (): Promise<boolean> => ipcRenderer.invoke('export:cancel'),
-    cmdString: (plan: ExportPlan): Promise<string> =>
-      ipcRenderer.invoke('export:cmdString', plan),
+    cmdString: (plan: ExportPlan): Promise<string> => ipcRenderer.invoke('export:cmdString', plan),
     onProgress: (cb: (p: ExportProgress) => void): (() => void) => {
       const handler = (_e: IpcRendererEvent, p: ExportProgress) => cb(p);
       ipcRenderer.on('export:progress', handler);
@@ -125,6 +131,8 @@ const api = {
 
   fs: {
     exists: (p: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', p),
+    stat: (p: string): Promise<{ size: number; mtimeMs: number } | null> =>
+      ipcRenderer.invoke('fs:stat', p),
   },
 
   shellOps: {
@@ -152,6 +160,48 @@ const api = {
     },
   },
 
+  update: {
+    download: (): Promise<void> => ipcRenderer.invoke('update:download'),
+    install: (): Promise<void> => ipcRenderer.invoke('update:install'),
+    onAvailable: (cb: (version: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, v: string) => cb(v);
+      ipcRenderer.on('update:available', handler);
+      return () => ipcRenderer.removeListener('update:available', handler);
+    },
+    onProgress: (cb: (percent: number) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, p: number) => cb(p);
+      ipcRenderer.on('update:progress', handler);
+      return () => ipcRenderer.removeListener('update:progress', handler);
+    },
+    onDownloaded: (cb: (version: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, v: string) => cb(v);
+      ipcRenderer.on('update:downloaded', handler);
+      return () => ipcRenderer.removeListener('update:downloaded', handler);
+    },
+    onError: (cb: (message: string) => void): (() => void) => {
+      const handler = (_: Electron.IpcRendererEvent, m: string) => cb(m);
+      ipcRenderer.on('update:error', handler);
+      return () => ipcRenderer.removeListener('update:error', handler);
+    },
+  },
+
+  diagnostics: {
+    get: (): Promise<DiagnosticsInfo> => ipcRenderer.invoke('diagnostics:get'),
+  },
+
+  project: {
+    saveDialog: (defaultName?: string): Promise<string | null> =>
+      ipcRenderer.invoke('project:saveDialog', defaultName),
+    openDialog: (): Promise<string | null> => ipcRenderer.invoke('project:openDialog'),
+    save: (data: ProjectData, filePath: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke('project:save', data, filePath),
+    load: (filePath: string): Promise<{ ok: boolean; data?: ProjectData; error?: string }> =>
+      ipcRenderer.invoke('project:load', filePath),
+    autosave: (data: ProjectData): Promise<void> => ipcRenderer.invoke('project:autosave', data),
+    getAutosave: (): Promise<ProjectData | null> => ipcRenderer.invoke('project:getAutosave'),
+    clearAutosave: (): Promise<void> => ipcRenderer.invoke('project:clearAutosave'),
+  },
+
   debug: {
     log: (payload: import('../shared/agent-debug').AgentDebugPayload): Promise<void> =>
       ipcRenderer.invoke('debug:agentLog', payload),
@@ -161,10 +211,3 @@ const api = {
 export type SubMixerApi = typeof api;
 
 contextBridge.exposeInMainWorld('api', api);
-
-// Also expose a tiny `electron` namespace for compatibility helpers
-contextBridge.exposeInMainWorld('electron', {
-  ipcRenderer: {
-    invoke: (...args: Parameters<typeof ipcRenderer.invoke>) => ipcRenderer.invoke(...args),
-  },
-});

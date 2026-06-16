@@ -51,7 +51,10 @@ function buildTree(input: string): Node[] {
     last = tagRe.lastIndex;
     const closing = m[1] === '/';
     if (closing) {
-      const name = m[2].trim().toLowerCase().replace(/[^a-z]/g, '');
+      const name = m[2]
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z]/g, '');
       // Pop to the nearest matching open tag (auto-close mismatches).
       for (let i = stack.length - 1; i >= 1; i--) {
         if (stack[i].tag?.name === name) {

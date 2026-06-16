@@ -21,6 +21,9 @@ export const Ico: React.FC<IcoProps> = ({ d, size = 14, fill = 'none' }) => (
   </svg>
 );
 
+// A static map of inline SVG path fragments (not React components); colocated
+// with the icon components on purpose.
+// eslint-disable-next-line react-refresh/only-export-components
 export const I = {
   folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />,
   file: (

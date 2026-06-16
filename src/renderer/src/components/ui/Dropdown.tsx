@@ -27,16 +27,12 @@ export function Dropdown({ value, onChange, options, width, align = 'start' }: D
   }, [open]);
 
   const opts: DropdownOption[] = options.map((o) =>
-    typeof o === 'string' ? { value: o, label: o } : o
+    typeof o === 'string' ? { value: o, label: o } : o,
   );
   const cur = opts.find((o) => o.value === value) || opts[0];
 
   return (
-    <div
-      className={`dd ${open ? 'open' : ''}`}
-      ref={ref}
-      style={width ? { width } : undefined}
-    >
+    <div className={`dd ${open ? 'open' : ''}`} ref={ref} style={width ? { width } : undefined}>
       <button type="button" className="dd-btn" onClick={() => setOpen(!open)}>
         <span className="dd-cur">{cur?.label}</span>
         <svg

@@ -16,7 +16,7 @@ export function FFmpegCommandModal({ cmd, onClose, onCopy }: Props) {
     <Modal onClose={onClose} label={t('ffmpeg_modal_title')} className="cmd-modal">
       <div className="modal-h">
         <div className="modal-t">{t('ffmpeg_modal_title')}</div>
-        <button className="icon-btn" type="button" onClick={onClose}>
+        <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
           <Ico d={I.x} />
         </button>
       </div>

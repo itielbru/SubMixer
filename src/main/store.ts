@@ -22,6 +22,15 @@ const DEFAULT_SETTINGS: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  defaultContainer: 'mkv',
+  encodePreset: 'faster',
+  encodeCrf: 20,
+  mp4AudioBitrate: 192,
+  burnInFontSize: 24,
+  burnInPrimaryColor: '#ffffff',
+  burnInOutline: 2,
+  lastSeenVersion: '',
+  keybindings: {},
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
@@ -53,7 +62,7 @@ async function save(s: AppSettings): Promise<void> {
 
 export async function setSetting<K extends keyof AppSettings>(
   key: K,
-  value: AppSettings[K]
+  value: AppSettings[K],
 ): Promise<AppSettings> {
   const s = await getSettings();
   const next = { ...s, [key]: value };

@@ -25,7 +25,7 @@ export function HistoryModal({ history, onClose, onClear, onShow, onReExport }: 
               <Ico d={I.trash} size={12} /> {t('history_clear_btn')}
             </button>
           )}
-          <button className="icon-btn" type="button" onClick={onClose}>
+          <button className="icon-btn" type="button" onClick={onClose} aria-label={t('close')}>
             <Ico d={I.x} />
           </button>
         </div>
@@ -55,7 +55,10 @@ export function HistoryModal({ history, onClose, onClear, onShow, onReExport }: 
                 <button
                   className="btn ghost compact"
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onReExport(h.plan!, h.durationSec ?? 0); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReExport(h.plan!, h.durationSec ?? 0);
+                  }}
                 >
                   {t('hist_reexport')}
                 </button>

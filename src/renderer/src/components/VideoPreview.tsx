@@ -72,7 +72,7 @@ export const VideoPreview = forwardRef<VideoPreviewHandle, Props>(function Video
     overlayRtl = false,
     subStyle = DEFAULT_SUB_STYLE,
   },
-  fwRef
+  fwRef,
 ) {
   const { t } = useT();
   const ref = useRef<HTMLVideoElement | null>(null);
@@ -166,7 +166,9 @@ export const VideoPreview = forwardRef<VideoPreviewHandle, Props>(function Video
       return (
         <span className="vp-audio ok mono">
           {t('audio_quick_playing')} {Math.round(audioLimitSec)}s
-          {extractPhase === 'full' ? ` · ${t('audio_extracting_full')} ${Math.round(audioPct)}%` : ''}
+          {extractPhase === 'full'
+            ? ` · ${t('audio_extracting_full')} ${Math.round(audioPct)}%`
+            : ''}
         </span>
       );
     }

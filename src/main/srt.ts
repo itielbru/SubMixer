@@ -28,7 +28,11 @@ function fmtTs(sec: number): string {
 
 export function parseSrt(text: string): SrtCue[] {
   // Normalize newlines and BOM
-  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
   if (!clean) return [];
 
   const blocks = clean.split(/\n\s*\n/);
@@ -68,6 +72,61 @@ export function serializeSrt(cues: SrtCue[]): string {
   return out.join('\n');
 }
 
+function fmtVttTs(sec: number): string {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const ms = Math.round((sec - Math.floor(sec)) * 1000);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+}
+
+export function serializeVtt(cues: SrtCue[]): string {
+  const out: string[] = ['WEBVTT', ''];
+  cues.forEach((c, i) => {
+    out.push(String(i + 1));
+    out.push(`${fmtVttTs(c.start)} --> ${fmtVttTs(c.end)}`);
+    out.push(c.text);
+    out.push('');
+  });
+  return out.join('\n');
+}
+
+function fmtAssTs(sec: number): string {
+  if (sec < 0) sec = 0;
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  const cs = Math.round((sec - Math.floor(sec)) * 100);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+export function serializeAss(cues: SrtCue[]): string {
+  const header = [
+    '[Script Info]',
+    'ScriptType: v4.00+',
+    'PlayResX: 384',
+    'PlayResY: 288',
+    'ScaledBorderAndShadow: yes',
+    '',
+    '[V4+ Styles]',
+    'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+    'Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1',
+    '',
+    '[Events]',
+    'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
+  ].join('\n');
+
+  const dialogues = cues
+    .map((c) => {
+      const text = c.text.replace(/\n/g, '\\N');
+      return `Dialogue: 0,${fmtAssTs(c.start)},${fmtAssTs(c.end)},Default,,0,0,0,,${text}`;
+    })
+    .join('\n');
+
+  return `${header}\n${dialogues}\n`;
+}
+
 import { transformCues } from '@shared/cue-sync';
 
 export { transformCues as applyTransform };
@@ -84,13 +143,20 @@ export async function writeCuesToFile(cues: SrtCue[], baseName: string): Promise
 
 // Parse VTT format to SrtCue
 export function parseVtt(text: string): SrtCue[] {
-  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
   if (!clean) return [];
 
   function parseVttTs(ts: string): number {
     const cleanTs = ts.trim().split(/\s+/)[0]; // strip settings
     const parts = cleanTs.split(':');
-    let h = 0, m = 0, s = 0, ms = 0;
+    let h = 0,
+      m = 0,
+      s = 0,
+      ms = 0;
     if (parts.length === 2) {
       const sParts = parts[1].split(/[.,]/);
       m = Number(parts[0]);
@@ -111,10 +177,15 @@ export function parseVtt(text: string): SrtCue[] {
   for (const block of blocks) {
     const lines = block.split('\n').map((l) => l.replace(/\s+$/, ''));
     if (lines.length === 0) continue;
-    
+
     // Ignore WEBVTT header block, STYLE block, REGION block, NOTE block
     const firstLine = lines[0].toUpperCase();
-    if (firstLine.startsWith('WEBVTT') || firstLine.startsWith('STYLE') || firstLine.startsWith('REGION') || firstLine.startsWith('NOTE')) {
+    if (
+      firstLine.startsWith('WEBVTT') ||
+      firstLine.startsWith('STYLE') ||
+      firstLine.startsWith('REGION') ||
+      firstLine.startsWith('NOTE')
+    ) {
       continue;
     }
 
@@ -132,7 +203,10 @@ export function parseVtt(text: string): SrtCue[] {
     const start = parseVttTs(tsMatch[1]);
     const end = parseVttTs(tsMatch[2]);
 
-    const rawText = lines.slice(tsLineIdx + 1).join('\n').trim();
+    const rawText = lines
+      .slice(tsLineIdx + 1)
+      .join('\n')
+      .trim();
     // Strip WebVTT formatting tags (e.g. <b>, <i>, <c.yellow>)
     const text = rawText.replace(/<[^>]+>/g, '').trim();
     if (!text) continue;
@@ -145,7 +219,11 @@ export function parseVtt(text: string): SrtCue[] {
 
 // Parse ASS/SSA format to SrtCue
 export function parseAss(text: string): SrtCue[] {
-  const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
   if (!clean) return [];
 
   const lines = clean.split('\n');
@@ -171,9 +249,12 @@ export function parseAss(text: string): SrtCue[] {
         const startStr = parts[1];
         const endStr = parts[2];
         const textStr = parts.slice(9).join(',');
-        
+
         // Remove style bracket tags {\an8}, {\i1}, etc. and replace \N with newline
-        const text = textStr.replace(/\{[^}]+\}/g, '').replace(/\\N/g, '\n').trim();
+        const text = textStr
+          .replace(/\{[^}]+\}/g, '')
+          .replace(/\\N/g, '\n')
+          .trim();
         if (!text) continue;
 
         cues.push({
@@ -184,6 +265,111 @@ export function parseAss(text: string): SrtCue[] {
         });
       }
     }
+  }
+  return cues;
+}
+
+// Parse SUB/MicroDVD format to SrtCue
+export function parseSub(text: string, defaultFps = 25): SrtCue[] {
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+  if (!clean) return [];
+
+  const lines = clean.split('\n');
+  const cues: SrtCue[] = [];
+  let fps = defaultFps;
+
+  for (const line of lines) {
+    const m = line.match(/^\{(\d+)\}\{(\d+)\}(.*)$/);
+    if (!m) continue;
+    const startFrame = Number(m[1]);
+    const endFrame = Number(m[2]);
+    const rawText = m[3];
+
+    // {1}{1}fps header line
+    if (startFrame === 1 && endFrame === 1) {
+      const parsedFps = Number(rawText.trim());
+      if (parsedFps > 0) fps = parsedFps;
+      continue;
+    }
+
+    const text = rawText.replace(/\|/g, '\n').trim();
+    if (!text) continue;
+
+    cues.push({
+      idx: cues.length + 1,
+      start: startFrame / fps,
+      end: endFrame / fps,
+      text,
+    });
+  }
+  return cues;
+}
+
+// Parse TTML/DFXP format to SrtCue
+export function parseTtml(text: string): SrtCue[] {
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!clean.trim()) return [];
+
+  // Extract frameRate from root tt element for SMPTE timing
+  const frameRateMatch = clean.match(/frameRate\s*=\s*["'](\d+)["']/);
+  const frameRate = frameRateMatch ? Number(frameRateMatch[1]) : 30;
+
+  const parseTtmlTs = (ts: string): number => {
+    if (!ts) return 0;
+    // HH:MM:SS.mmm or HH:MM:SS,mmm
+    const ms = ts.match(/^(\d+):(\d{2}):(\d{2})[.,](\d+)$/);
+    if (ms) {
+      const frac = ms[4].length <= 2 ? Number(ms[4]) * 10 : Number(ms[4]);
+      return Number(ms[1]) * 3600 + Number(ms[2]) * 60 + Number(ms[3]) + frac / 1000;
+    }
+    // HH:MM:SS:FF (SMPTE frames)
+    const smpte = ts.match(/^(\d+):(\d{2}):(\d{2}):(\d{2})$/);
+    if (smpte) {
+      return (
+        Number(smpte[1]) * 3600 +
+        Number(smpte[2]) * 60 +
+        Number(smpte[3]) +
+        Number(smpte[4]) / frameRate
+      );
+    }
+    return 0;
+  };
+
+  const cues: SrtCue[] = [];
+  // Match <p ...> elements; use a simple regex rather than a full XML parser
+  const pRe = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pRe.exec(clean)) !== null) {
+    const attrs = match[1];
+    const inner = match[2];
+
+    const beginM = attrs.match(/\bbegin\s*=\s*["']([^"']+)["']/);
+    const endM = attrs.match(/\bend\s*=\s*["']([^"']+)["']/);
+    if (!beginM || !endM) continue;
+
+    const start = parseTtmlTs(beginM[1]);
+    const end = parseTtmlTs(endM[1]);
+
+    // Strip XML tags; replace <br> variants with newline
+    const textRaw = inner
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&apos;/g, "'")
+      .replace(/&quot;/g, '"')
+      .trim();
+    if (!textRaw) continue;
+
+    cues.push({ idx: cues.length + 1, start, end, text: textRaw });
   }
   return cues;
 }
@@ -247,7 +433,7 @@ function pickBestText(buf: Buffer, preferred?: string): { text: string; encoding
 
 export async function readSrtFile(
   filePath: string,
-  preferredEncoding?: string
+  preferredEncoding?: string,
 ): Promise<{
   cues: SrtCue[];
   encoding: string;
@@ -262,6 +448,10 @@ export async function readSrtFile(
     cues = parseVtt(text);
   } else if (ext === '.ass' || ext === '.ssa') {
     cues = parseAss(text);
+  } else if (ext === '.sub') {
+    cues = parseSub(text);
+  } else if (ext === '.ttml' || ext === '.dfxp' || ext === '.xml') {
+    cues = parseTtml(text);
   } else {
     cues = parseSrt(text);
   }
@@ -279,7 +469,7 @@ const tempDir = () => path.join(app.getPath('userData'), 'temp', 'srt');
 
 export async function writeTransformedSrt(
   sourcePath: string,
-  opts: { offset: number; speed: number; encoding?: string }
+  opts: { offset: number; speed: number; encoding?: string },
 ): Promise<string> {
   const dir = tempDir();
   await fs.mkdir(dir, { recursive: true });
@@ -288,13 +478,12 @@ export async function writeTransformedSrt(
   if (cues.length === 0) {
     throw new Error(`No subtitle cues found in ${path.basename(sourcePath)}`);
   }
-  const transformed =
-    opts.offset === 0 && opts.speed === 1 ? cues : transformCues(cues, opts);
+  const transformed = opts.offset === 0 && opts.speed === 1 ? cues : transformCues(cues, opts);
   const text = serializeSrt(transformed);
 
   const outPath = path.join(
     dir,
-    `${Date.now()}-${path.basename(sourcePath, path.extname(sourcePath))}.srt`
+    `${Date.now()}-${path.basename(sourcePath, path.extname(sourcePath))}.srt`,
   );
   await fs.writeFile(outPath, '\uFEFF' + text, 'utf-8');
   return outPath;
@@ -303,13 +492,22 @@ export async function writeTransformedSrt(
 export async function exportTransformedSrt(
   sourcePath: string,
   destPath: string,
-  opts: { offset: number; speed: number; encoding?: string }
+  opts: { offset: number; speed: number; encoding?: string },
 ): Promise<void> {
   const { cues } = await readSrtFile(sourcePath, opts.encoding);
-  const transformed =
-    opts.offset === 0 && opts.speed === 1 ? cues : transformCues(cues, opts);
-  const text = serializeSrt(transformed);
-  await fs.writeFile(destPath, '\uFEFF' + text, 'utf-8');
+  const transformed = opts.offset === 0 && opts.speed === 1 ? cues : transformCues(cues, opts);
+  const ext = path.extname(destPath).toLowerCase();
+  let text: string;
+  let bom = false;
+  if (ext === '.vtt') {
+    text = serializeVtt(transformed);
+  } else if (ext === '.ass' || ext === '.ssa') {
+    text = serializeAss(transformed);
+  } else {
+    text = serializeSrt(transformed);
+    bom = true;
+  }
+  await fs.writeFile(destPath, bom ? '\uFEFF' + text : text, 'utf-8');
 }
 
 export async function clearTempSrt(): Promise<void> {

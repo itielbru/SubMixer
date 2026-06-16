@@ -70,7 +70,16 @@ export interface SrtCue {
 
 export interface ExportPlan {
   inputFile: string;
-  externalSubs: { path: string; lang: string; def: boolean; forced: boolean; offset: number; speed: number; trackName: string; encoding: string; }[];
+  externalSubs: {
+    path: string;
+    lang: string;
+    def: boolean;
+    forced: boolean;
+    offset: number;
+    speed: number;
+    trackName: string;
+    encoding: string;
+  }[];
   videoTrackId: number | null;
   audioTracks: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
   embeddedSubs: { id: number; lang: string; def: boolean; forced: boolean; codecName?: string }[];
@@ -82,6 +91,15 @@ export interface ExportPlan {
    *  instead of muxing it as a soft track. Requires re-encoding the video.
    *  null = normal soft-subtitle mux. */
   burnInSubIndex: number | null;
+  /** Encode quality (only applies when burnInSubIndex !== null). */
+  encodePreset: string;
+  encodeCrf: number;
+  /** Burn-in subtitle appearance (only applies when burnInSubIndex !== null). */
+  burnInFontSize: number;
+  burnInPrimaryColor: string;
+  burnInOutline: number;
+  /** MP4 audio bitrate override when transcoding is required (kbps). */
+  mp4AudioBitrate: number;
 }
 
 export interface ExportProgress {
@@ -134,6 +152,28 @@ export interface AppSettings {
   subPosition: 'bottom' | 'top';
   /** Burn the active external subtitle into the video on export (re-encodes). */
   burnInSubs: boolean;
+  /** Default output container for new exports. */
+  defaultContainer: 'mkv' | 'mp4';
+  /** x264 preset for burn-in encodes (speed ↔ quality trade-off). */
+  encodePreset: 'ultrafast' | 'veryfast' | 'faster' | 'fast' | 'medium' | 'slow';
+  /** CRF quality value for burn-in encodes (lower = higher quality). */
+  encodeCrf: number;
+  /** Audio bitrate in kbps when MP4 export must transcode the audio. */
+  mp4AudioBitrate: number;
+  /** Burn-in subtitle font size (scaled to video height by ffmpeg). */
+  burnInFontSize: number;
+  /** Burn-in primary text color as hex (#RRGGBB). */
+  burnInPrimaryColor: string;
+  /** Burn-in outline thickness (0 = none, 1–4 = thicker). */
+  burnInOutline: number;
+  /** Last version the user saw in the "What's New" modal; empty string on first run. */
+  lastSeenVersion: string;
+  /**
+   * Custom key overrides for rebindable shortcuts.
+   * Keys are action IDs (e.g. 'set_start'); values are lowercased KeyboardEvent.key strings.
+   * Absent entries fall back to the built-in default.
+   */
+  keybindings: Partial<Record<string, string>>;
 }
 
 export type SubStyleMode = 'outline' | 'box' | 'none';
@@ -149,6 +189,54 @@ export interface ProbeResult {
   ok: boolean;
   file?: MediaFile;
   error?: string;
+}
+
+export interface ProjectSubEntry {
+  path: string;
+  name: string;
+  lang: string;
+  trackName: string;
+  offset: number;
+  speed: number;
+  def: boolean;
+  forced: boolean;
+  encoding: string;
+  editedCues?: SrtCue[];
+}
+
+export interface ProjectData {
+  schemaVersion: 1;
+  savedAt: string;
+  videoPath: string;
+  trackOverrides: Array<{ id: number; keep: boolean; def: boolean; forced: boolean }>;
+  extSubs: ProjectSubEntry[];
+  activeSubPath: string | null;
+  metadata: {
+    contentType: 'movie' | 'series';
+    title: string;
+    year: string;
+    season: string;
+    episode: string;
+    container: string;
+    overrideName: boolean;
+    customName: string;
+  };
+}
+
+export interface DiagnosticsInfo {
+  appVersion: string;
+  electronVersion: string;
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+  ffmpegAvailable: boolean;
+  ffmpegPath: string | null;
+  ffprobePath: string | null;
+  ffmpegVersion: string | null;
+  userDataPath: string;
+  previewCacheSizeBytes: number;
+  peaksCacheSizeBytes: number;
+  logSizeBytes: number;
 }
 
 export interface AddSubResult {

@@ -68,6 +68,8 @@ interface Props {
   subOffset: number;
   subSpeed: number;
   subStyle: SubOverlayStyle;
+  /** Custom key overrides; absent actions use the built-in default key. */
+  keybindings?: Partial<Record<string, string>>;
 }
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5];
@@ -107,16 +109,13 @@ export function PreviewBar({
   subOffset,
   subSpeed,
   subStyle,
+  keybindings = {},
 }: Props) {
   const { t } = useT();
-  const syncOpts = useMemo(
-    () => ({ offset: subOffset, speed: subSpeed }),
-    [subOffset, subSpeed]
-  );
+  const syncOpts = useMemo(() => ({ offset: subOffset, speed: subSpeed }), [subOffset, subSpeed]);
   const displayCues = useMemo(
-    () =>
-      subOffset === 0 && subSpeed === 1 ? cues : transformCues(cues, syncOpts),
-    [cues, syncOpts, subOffset, subSpeed]
+    () => (subOffset === 0 && subSpeed === 1 ? cues : transformCues(cues, syncOpts)),
+    [cues, syncOpts, subOffset, subSpeed],
   );
   const handleTimelineUpdateCue = useCallback(
     (idx: number, patch: Partial<SrtCue>) => {
@@ -133,7 +132,7 @@ export function PreviewBar({
       }
       onUpdateCue(idx, next);
     },
-    [onUpdateCue, syncOpts, subOffset, subSpeed]
+    [onUpdateCue, syncOpts, subOffset, subSpeed],
   );
   const [selectedIdx, setSelectedIdx] = useState(-1);
 
@@ -185,8 +184,11 @@ export function PreviewBar({
   }, [cues.length, selectedIdx]);
 
   const externalAudio = audioMode === 'quick' || audioMode === 'full';
-  const vpAudioMode: 'video' | 'extracting' | 'external' =
-    externalAudio ? 'external' : audioExtracting ? 'extracting' : 'video';
+  const vpAudioMode: 'video' | 'extracting' | 'external' = externalAudio
+    ? 'external'
+    : audioExtracting
+      ? 'extracting'
+      : 'video';
 
   // Apply playbackRate to both elements.
   useEffect(() => {
@@ -253,7 +255,7 @@ export function PreviewBar({
     (t: number) => {
       if (!externalAudio) onPreviewT(t);
     },
-    [externalAudio, onPreviewT]
+    [externalAudio, onPreviewT],
   );
 
   // Authoritative seek: set state AND imperatively set both media elements in
@@ -262,8 +264,7 @@ export function PreviewBar({
   // subtitle overlay out of sync.
   const handleSeek = useCallback(
     (t: number) => {
-      const maxT =
-        audioLimitSec != null ? Math.min(durationSec, audioLimitSec) : durationSec;
+      const maxT = audioLimitSec != null ? Math.min(durationSec, audioLimitSec) : durationSec;
       const ct = Math.max(0, Math.min(maxT, t));
       onPreviewT(ct);
       const v = videoRef.current?.el;
@@ -285,7 +286,7 @@ export function PreviewBar({
         }
       }
     },
-    [onPreviewT, externalAudio, audioLimitSec, durationSec]
+    [onPreviewT, externalAudio, audioLimitSec, durationSec],
   );
 
   // Loop the selected cue: when the playhead crosses the cue's end,
@@ -330,12 +331,14 @@ export function PreviewBar({
     const a = audioRef.current;
     if (!a || !a.error) return;
     const codeName =
-      ({
-        1: 'MEDIA_ERR_ABORTED',
-        2: 'MEDIA_ERR_NETWORK',
-        3: 'MEDIA_ERR_DECODE',
-        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
-      } as Record<number, string>)[a.error.code] || `code=${a.error.code}`;
+      (
+        {
+          1: 'MEDIA_ERR_ABORTED',
+          2: 'MEDIA_ERR_NETWORK',
+          3: 'MEDIA_ERR_DECODE',
+          4: 'MEDIA_ERR_SRC_NOT_SUPPORTED',
+        } as Record<number, string>
+      )[a.error.code] || `code=${a.error.code}`;
     reportError(`audio element: ${codeName}`);
   };
 
@@ -347,8 +350,7 @@ export function PreviewBar({
     else v.pause();
   };
   const seekBy = (delta: number): void => {
-    const maxT =
-      audioLimitSec != null ? Math.min(durationSec, audioLimitSec) : durationSec;
+    const maxT = audioLimitSec != null ? Math.min(durationSec, audioLimitSec) : durationSec;
     const t = Math.max(0, Math.min(maxT, previewT + delta));
     const v = videoRef.current?.el;
     if (v) {
@@ -433,24 +435,70 @@ export function PreviewBar({
       { key: 'space', label: t('shortcut_play'), handler: togglePlay },
       { key: 'arrowleft', label: t('shortcut_prev_cue'), handler: () => stepCue(-1) },
       { key: 'arrowright', label: t('shortcut_next_cue'), handler: () => stepCue(1) },
-      { key: 'arrowleft', shift: true, label: t('shortcut_seek_100ms_back'), handler: () => seekBy(-0.1) },
-      { key: 'arrowright', shift: true, label: t('shortcut_seek_100ms_fwd'), handler: () => seekBy(0.1) },
-      { key: 'arrowleft', alt: true, label: t('shortcut_seek_10ms_back'), handler: () => seekBy(-0.01) },
-      { key: 'arrowright', alt: true, label: t('shortcut_seek_10ms_fwd'), handler: () => seekBy(0.01) },
-      { key: 'arrowleft', ctrl: true, label: t('shortcut_seek_1s_back'), handler: () => seekBy(-1) },
+      {
+        key: 'arrowleft',
+        shift: true,
+        label: t('shortcut_seek_100ms_back'),
+        handler: () => seekBy(-0.1),
+      },
+      {
+        key: 'arrowright',
+        shift: true,
+        label: t('shortcut_seek_100ms_fwd'),
+        handler: () => seekBy(0.1),
+      },
+      {
+        key: 'arrowleft',
+        alt: true,
+        label: t('shortcut_seek_10ms_back'),
+        handler: () => seekBy(-0.01),
+      },
+      {
+        key: 'arrowright',
+        alt: true,
+        label: t('shortcut_seek_10ms_fwd'),
+        handler: () => seekBy(0.01),
+      },
+      {
+        key: 'arrowleft',
+        ctrl: true,
+        label: t('shortcut_seek_1s_back'),
+        handler: () => seekBy(-1),
+      },
       { key: 'arrowright', ctrl: true, label: t('shortcut_seek_1s_fwd'), handler: () => seekBy(1) },
-      { key: 'f11', label: t('shortcut_set_start'), handler: setStartHere },
-      { key: 'f12', label: t('shortcut_set_end'), handler: setEndHere },
-      { key: 'insert', label: t('shortcut_insert_cue'), handler: insertHere },
-      { key: 'delete', label: t('shortcut_delete'), handler: deleteHere },
-      { key: 'l', ctrl: true, label: t('shortcut_loop'), handler: () => setLoopOn((v) => !v) },
+      {
+        key: keybindings['set_start'] ?? 'f11',
+        label: t('shortcut_set_start'),
+        handler: setStartHere,
+      },
+      {
+        key: keybindings['set_end'] ?? 'f12',
+        label: t('shortcut_set_end'),
+        handler: setEndHere,
+      },
+      {
+        key: keybindings['insert_cue'] ?? 'insert',
+        label: t('shortcut_insert_cue'),
+        handler: insertHere,
+      },
+      {
+        key: keybindings['delete_cue'] ?? 'delete',
+        label: t('shortcut_delete'),
+        handler: deleteHere,
+      },
+      {
+        key: keybindings['loop'] ?? 'l',
+        ctrl: !keybindings['loop'],
+        label: t('shortcut_loop'),
+        handler: () => setLoopOn((v) => !v),
+      },
       { key: '?', shift: true, label: t('shortcut_help'), handler: () => onOpenShortcuts?.() },
       { key: '/', label: t('shortcut_help'), handler: () => onOpenShortcuts?.() },
     ],
     // The handlers close over previewT/selectedIdx/cues — listing them
     // explicitly keeps the listener fresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [previewT, selectedIdx, cues, durationSec, onOpenShortcuts, t]
+    [previewT, selectedIdx, cues, durationSec, onOpenShortcuts, t, keybindings],
   );
   useKeyboardShortcuts(shortcuts);
 
@@ -467,12 +515,7 @@ export function PreviewBar({
 
   return (
     <div className="preview-bar">
-      <audio
-        ref={audioRef}
-        src={audioUrl || undefined}
-        preload="auto"
-        onError={onAudioElError}
-      />
+      <audio ref={audioRef} src={audioUrl || undefined} preload="auto" onError={onAudioElError} />
 
       <div className="pv-head">
         <div className="pv-title">{t('preview_editor_title')}</div>
@@ -531,9 +574,7 @@ export function PreviewBar({
               ? `${t('peaks_loading')} ${Math.round(peaksPct)}%`
               : cues.length > 0
                 ? `${cues.length} ${t('cues_count')} · ${
-                    selected
-                      ? `${t('selected_cue')} #${selectedIdx + 1}`
-                      : t('no_cue_selected')
+                    selected ? `${t('selected_cue')} #${selectedIdx + 1}` : t('no_cue_selected')
                   }`
                 : t('no_srt_loaded')}
           </div>
@@ -622,11 +663,7 @@ export function PreviewBar({
                 : '—'}
           </span>
           <span className="pv-cue-text">
-            {selected
-              ? selected.text
-              : currentCue
-                ? currentCue.text
-                : t('no_cue_at_point')}
+            {selected ? selected.text : currentCue ? currentCue.text : t('no_cue_at_point')}
           </span>
         </div>
         {!selected && (subOffset !== 0 || subSpeed !== 1) && fileCueAtPlayhead && (

@@ -21,6 +21,15 @@ const DEFAULT: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  defaultContainer: 'mkv',
+  encodePreset: 'faster',
+  encodeCrf: 20,
+  mp4AudioBitrate: 192,
+  burnInFontSize: 24,
+  burnInPrimaryColor: '#ffffff',
+  burnInOutline: 2,
+  lastSeenVersion: '',
+  keybindings: {},
 };
 
 export function useSettings(): [
@@ -58,6 +67,8 @@ export function useSettings(): [
     } else {
       applyTheme(settings);
     }
+    // Re-apply theme only when the visual settings change, not on every settings write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.theme, settings.accent, settings.font]);
 
   useEffect(() => {

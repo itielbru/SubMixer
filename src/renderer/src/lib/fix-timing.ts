@@ -20,7 +20,7 @@ export interface FixTimingOptions {
 /** Fix overlaps and/or short gaps between adjacent cues. */
 export function fixOverlapsAndShortGaps(
   cues: SrtCue[],
-  opts: FixTimingOptions
+  opts: FixTimingOptions,
 ): { cues: SrtCue[]; changes: TimingFixChange[] } {
   if (cues.length < 2) return { cues: cues.map((c) => ({ ...c })), changes: [] };
   const next = cues.map((c) => ({ ...c }));

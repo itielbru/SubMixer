@@ -6,46 +6,31 @@ import { agentDebug } from '@shared/agent-debug';
 
 import { PREVIEW_QUICK_SECONDS, type PreviewExtractPhase } from '@shared/preview';
 
-
-
 function isChromiumDecodableAudio(codecName: string | undefined): boolean {
-
   if (!codecName) return false;
 
   const c = codecName.toLowerCase();
 
   return /^(aac|mp3|mp2|opus|vorbis|flac)$/.test(c);
-
 }
 
-
-
 function needsExtractFor(file: MediaFile | null, previewAudioId: number | null): boolean {
-
   if (!file || previewAudioId === null) return false;
 
   const audioTrack = file.tracks.find((t) => t.id === previewAudioId);
 
   return !isChromiumDecodableAudio(audioTrack?.codecName);
-
 }
-
-
 
 export type PreviewAudioMode = 'video' | 'quick' | 'full' | 'extracting';
 
-
-
 export function usePreview(
-
   file: MediaFile | null,
 
   previewAudioId: number | null,
 
-  onError?: (msg: string) => void
-
+  onError?: (msg: string) => void,
 ) {
-
   const [previewT, setPreviewT] = useState(0);
 
   const previewTRef = useRef(0);
@@ -82,32 +67,19 @@ export function usePreview(
 
   previewAudioIdRef.current = previewAudioId;
 
-
-
   useEffect(() => {
-
     previewTRef.current = previewT;
-
   }, [previewT]);
 
-
-
   useEffect(() => {
-
     return window.api.preview.onProgress((p) => {
-
       setExtractPhase(p.phase);
 
       setAudioPct(p.percent);
-
     });
-
   }, []);
 
-
-
   const runExtractPipeline = useCallback(async (runGen: number) => {
-
     const file = fileRef.current;
 
     const previewAudioId = previewAudioIdRef.current;
@@ -115,23 +87,19 @@ export function usePreview(
     // #region agent log
 
     agentDebug(
-
       'usePreview.ts:runExtractPipeline',
 
       'pipeline_start',
 
       {
-
         gen: runGen,
 
         key: file ? `${file.path}:${previewAudioId}` : null,
 
         needsExtract: needsExtractFor(file, previewAudioId),
-
       },
 
-      'H1'
-
+      'H1',
     );
 
     // #endregion
@@ -141,7 +109,6 @@ export function usePreview(
     if (pipelineGenRef.current !== runGen) return;
 
     if (!needsExtractFor(file, previewAudioId)) {
-
       setAudioMode('video');
 
       setAudioUrl(null);
@@ -153,18 +120,13 @@ export function usePreview(
       setAudioPct(0);
 
       return;
-
     }
-
-
 
     const key = `${file.path}:${previewAudioId}`;
 
     const gen = runGen;
 
     pipelineKeyRef.current = key;
-
-
 
     setAudioUrl(null);
 
@@ -178,54 +140,46 @@ export function usePreview(
 
     setAudioPct(0);
 
-
-
     const quick = await window.api.preview.extract(
-
       file.path,
 
       previewAudioId,
 
       file.durationSec,
 
-      'quick'
-
+      'quick',
     );
 
     if (pipelineGenRef.current !== gen || pipelineKeyRef.current !== key) {
-
       // #region agent log
 
-      agentDebug('usePreview.ts:quick', 'pipeline_stale_after_quick', { gen, currentGen: pipelineGenRef.current }, 'H4');
+      agentDebug(
+        'usePreview.ts:quick',
+        'pipeline_stale_after_quick',
+        { gen, currentGen: pipelineGenRef.current },
+        'H4',
+      );
 
       // #endregion
 
       return;
-
     }
-
-
 
     // #region agent log
 
     agentDebug(
-
       'usePreview.ts:quick',
 
       'quick_result',
 
       { ok: quick.ok, tier: quick.tier, error: quick.error, cached: quick.cached },
 
-      'H2'
-
+      'H2',
     );
 
     // #endregion
 
-
-
     if (!quick.ok || !quick.url) {
-
       if (pipelineGenRef.current !== gen || pipelineKeyRef.current !== key) return;
 
       setAudioMode('video');
@@ -237,13 +191,9 @@ export function usePreview(
       if (quick.error) onErrorRef.current?.(quick.error);
 
       return;
-
     }
 
-
-
     if (quick.tier === 'full') {
-
       setAudioUrl(quick.url);
 
       setAudioMode('full');
@@ -253,10 +203,7 @@ export function usePreview(
       setAudioPct(100);
 
       return;
-
     }
-
-
 
     const limit = quick.limitSec ?? PREVIEW_QUICK_SECONDS;
 
@@ -268,32 +215,25 @@ export function usePreview(
 
     setExtractPhase(null);
 
-
-
     setExtractPhase('full');
 
     setAudioPct(0);
 
     const full = await window.api.preview.extract(
-
       file.path,
 
       previewAudioId,
 
       file.durationSec,
 
-      'full'
-
+      'full',
     );
 
     if (pipelineGenRef.current !== gen || pipelineKeyRef.current !== key) return;
 
-
-
     setExtractPhase(null);
 
     if (full.ok && full.url) {
-
       const t = Math.min(previewTRef.current, file.durationSec);
 
       setAudioUrl(full.url);
@@ -305,31 +245,19 @@ export function usePreview(
       setPreviewT(t);
 
       previewTRef.current = t;
-
     } else if (!full.ok && full.error) {
-
       onErrorRef.current?.(full.error);
-
     }
-
   }, []);
 
-
-
   const requestAudioExtract = useCallback(() => {
-
     const gen = ++pipelineGenRef.current;
 
     void runExtractPipeline(gen);
-
   }, [runExtractPipeline]);
 
-
-
   useEffect(() => {
-
     if (!file) {
-
       setVideoUrl(null);
 
       setPreviewT(0);
@@ -337,7 +265,6 @@ export function usePreview(
       previewTRef.current = 0;
 
       return;
-
     }
 
     setVideoUrl(window.api.media.url(file.path));
@@ -345,13 +272,11 @@ export function usePreview(
     setPreviewT(0);
 
     previewTRef.current = 0;
-
+    // Reset only when the source file changes; other `file` fields are irrelevant here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file?.path]);
 
-
-
   useEffect(() => {
-
     pipelineEffectCountRef.current += 1;
 
     const gen = ++pipelineGenRef.current;
@@ -359,13 +284,11 @@ export function usePreview(
     // #region agent log
 
     agentDebug(
-
       'usePreview.ts:effect',
 
       'pipeline_effect_fired',
 
       {
-
         path: file?.path ?? null,
 
         previewAudioId,
@@ -373,13 +296,11 @@ export function usePreview(
         effectCount: pipelineEffectCountRef.current,
 
         gen,
-
       },
 
       'H1',
 
-      'post-fix-v3'
-
+      'post-fix-v3',
     );
 
     // #endregion
@@ -397,57 +318,41 @@ export function usePreview(
     setAudioPct(0);
 
     if (!file || previewAudioId === null) {
-
       setAudioMode('video');
 
       return;
-
     }
 
     void runExtractPipeline(gen);
-
+    // Keyed on the identifying file path + audio track; full `file` identity is not relevant.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file?.path, previewAudioId, runExtractPipeline]);
 
-
-
   const clampTime = useCallback(
-
     (t: number): number => {
-
       if (!file) return t;
 
       const max = audioLimitSec != null ? audioLimitSec : file.durationSec;
 
       return Math.max(0, Math.min(max, t));
-
     },
 
-    [file, audioLimitSec]
-
+    [file, audioLimitSec],
   );
 
-
-
   const setPreviewTime = useCallback(
-
     (t: number) => {
-
       const c = clampTime(t);
 
       setPreviewT(c);
 
       previewTRef.current = c;
-
     },
 
-    [clampTime]
-
+    [clampTime],
   );
 
-
-
   const resetOnFileChange = useCallback(() => {
-
     pipelineGenRef.current++;
 
     pipelineKeyRef.current = '';
@@ -463,17 +368,11 @@ export function usePreview(
     setAudioMode('video');
 
     setExtractPhase(null);
-
   }, []);
-
-
 
   const audioExtracting = audioMode === 'extracting' || extractPhase !== null;
 
-
-
   return {
-
     previewT,
 
     setPreviewT,
@@ -501,9 +400,5 @@ export function usePreview(
     resetOnFileChange,
 
     clampTime,
-
   };
-
 }
-
-

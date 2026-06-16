@@ -53,7 +53,7 @@ export function computeWarnings(
   prev: SrtCue | undefined,
   next: SrtCue | undefined,
   thresholds: CueWarningThresholds = DEFAULT_CUE_WARNING_THRESHOLDS,
-  videoDurationSec?: number
+  videoDurationSec?: number,
 ): CueWarnings {
   const dur = Math.max(0, cue.end - cue.start);
   const chars = visibleLen(cue.text);
@@ -65,10 +65,8 @@ export function computeWarnings(
   const veryFastCps = cps > thresholds.hardMaxCps;
   const overlapsPrev = !!prev && cue.start < prev.end - 1e-3;
   const overlapsNext = !!next && cue.end > next.start + 1e-3;
-  const shortGapPrev =
-    !!prev && !overlapsPrev && cue.start - prev.end < thresholds.minGapSec;
-  const shortGapNext =
-    !!next && !overlapsNext && next.start - cue.end < thresholds.minGapSec;
+  const shortGapPrev = !!prev && !overlapsPrev && cue.start - prev.end < thresholds.minGapSec;
+  const shortGapNext = !!next && !overlapsNext && next.start - cue.end < thresholds.minGapSec;
   const overrun =
     videoDurationSec !== undefined && videoDurationSec > 0 && cue.end > videoDurationSec + 1e-3;
 
