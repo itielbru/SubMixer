@@ -94,7 +94,11 @@ function AppContent({
   const setEditedSubIds = useDocStore((s) => s.setEditedSubIds);
   const pushUndo = useDocStore((s) => s.pushUndo);
   const snapshotCues = useDocStore((s) => s.snapshotCues);
-  const { undo, redo } = useDocStore((s) => ({ undo: s.undo, redo: s.redo }));
+  // Select each action individually: a selector returning a new object literal
+  // would change identity on every render and trigger an infinite update loop
+  // under Zustand v5's default (Object.is) equality.
+  const undo = useDocStore((s) => s.undo);
+  const redo = useDocStore((s) => s.redo);
   const cues: SrtCue[] = activeSubId ? (cuesBySubId[activeSubId] ?? []) : [];
 
   // ── Export metadata + batch queue (Zustand store) ────────────────────────
