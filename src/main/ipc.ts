@@ -350,6 +350,7 @@ export function registerIpc(): void {
 
   ipcMain.handle('srt:writeCues', async (_e, cues: SrtCue[], baseName: string) => {
     try {
+      assertString(baseName, 'baseName');
       const out = await writeCuesToFile(cues, baseName);
       return { ok: true, path: out };
     } catch (err) {
@@ -387,6 +388,10 @@ export function registerIpc(): void {
       },
     ) => {
       try {
+        assertString(args?.sourcePath, 'args.sourcePath');
+        assertAbsPath(args.sourcePath, 'args.sourcePath');
+        assertString(args?.destPath, 'args.destPath');
+        assertAbsPath(args.destPath, 'args.destPath');
         await exportTransformedSrt(args.sourcePath, args.destPath, {
           offset: args.offset,
           speed: args.speed,
@@ -615,6 +620,10 @@ export function registerIpc(): void {
   });
 
   ipcMain.handle('export:cmdString', async (_e, plan: ExportPlan) => {
+    assertString(plan?.inputFile, 'plan.inputFile');
+    assertAbsPath(plan.inputFile, 'plan.inputFile');
+    assertString(plan?.outputPath, 'plan.outputPath');
+    assertAbsPath(plan.outputPath, 'plan.outputPath');
     const processed = await prepareExternalSubs(plan.externalSubs);
     try {
       return buildCommandString(plan, processed);
@@ -652,12 +661,16 @@ export function registerIpc(): void {
   ipcMain.handle('history:list', async () => (await getSettings()).history);
   ipcMain.handle('history:clear', async () => clearHistory());
 
-  ipcMain.handle('fs:exists', async (_e, p: string) =>
-    fs
-      .stat(p)
-      .then(() => true)
-      .catch(() => false),
-  );
+  ipcMain.handle('fs:exists', async (_e, p: string) => {
+    try {
+      assertString(p, 'path');
+      assertAbsPath(p, 'path');
+      await fs.stat(p);
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
   ipcMain.handle('fs:stat', async (_e, p: string) => {
     try {
@@ -735,6 +748,8 @@ export function registerIpc(): void {
 
   ipcMain.handle('project:save', async (_e, data: ProjectData, filePath: string) => {
     try {
+      assertString(filePath, 'filePath');
+      assertAbsPath(filePath, 'filePath');
       await fs.mkdir(path.dirname(filePath), { recursive: true });
       await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
       return { ok: true };
@@ -745,6 +760,8 @@ export function registerIpc(): void {
 
   ipcMain.handle('project:load', async (_e, filePath: string) => {
     try {
+      assertString(filePath, 'filePath');
+      assertAbsPath(filePath, 'filePath');
       const text = await fs.readFile(filePath, 'utf-8');
       const data = JSON.parse(text) as ProjectData;
       if (data.schemaVersion !== 1) {
