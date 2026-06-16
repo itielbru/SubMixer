@@ -6,6 +6,21 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-06-15
+
+### Added
+
+- **Output overwrite guard**: before every export, the target path is checked; if a file already exists the user is asked to confirm before it is overwritten.
+- **Manual release workflow**: a `workflow_dispatch` release path creates the tag, builds the Windows installer, and promotes the draft GitHub Release to public after a successful build.
+
+### Improved
+
+- **Clearer FFmpeg errors**: `parseFfmpegError` now recognizes disk-full, permission-denied, codec/container mismatch, corrupt-source, and subtitle-encoding failures, returning plain-language messages instead of raw ffmpeg output.
+
+### Fixed
+
+- **E2E job ran zero tests**: `playwright.config.ts` had an empty `projects: []`, so the CI E2E job reported "No tests found"; an `electron` project is now declared so the smoke suite actually runs.
+
 ## [1.1.0] - 2026-06-14
 
 ### Added
