@@ -45,7 +45,7 @@ export async function evictByAge(dir: string, maxAgeMs: number): Promise<void> {
 }
 
 /** Delete oldest files in `dir` until its total size is under `maxBytes`. */
-async function enforceCacheQuota(dir: string, maxBytes: number): Promise<void> {
+export async function enforceCacheQuota(dir: string, maxBytes: number): Promise<void> {
   let names: string[];
   try {
     names = await fs.readdir(dir);
