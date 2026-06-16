@@ -844,8 +844,9 @@ const PREVIEW_MIME: Record<string, string> = {
 async function servePreview(filePath: string, request: Request): Promise<Response> {
   const root = path.resolve(userDataPath());
   const resolved = path.resolve(filePath);
-  const rel = path.relative(root, resolved);
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+  // Explicit prefix check: resolved must be root itself or a child of root.
+  // The path.sep ensures we don't match a sibling that shares a prefix (e.g. /foo vs /foobar).
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
     return new Response('Forbidden', { status: 403 });
   }
   let stat;
@@ -955,6 +956,8 @@ export function registerPreviewProtocol(): void {
       const fromPath = decodeURIComponent(url.pathname.replace(/^\//, ''));
       const filePath = fromQuery ?? fromPath;
       if (!filePath) return new Response('Missing path', { status: 400 });
+      // Require absolute paths — relative paths could resolve to unexpected locations.
+      if (!path.isAbsolute(filePath)) return new Response('Forbidden', { status: 403 });
 
       if (route === 'media') return serveMedia(filePath, request);
       return servePreview(filePath, request);

@@ -9,8 +9,6 @@ import type {
 } from '@shared/types';
 import { mediaTimeForCueStart } from '@shared/cue-sync';
 import { TopBar } from './components/TopBar';
-import { SourcePanel } from './components/SourcePanel';
-import { ContentDetails } from './components/ContentDetails';
 import { TracksList, type Filter } from './components/TracksList';
 import { PreviewBar } from './components/PreviewBar';
 import type { SubOverlayStyle } from './components/VideoPreview';
@@ -26,11 +24,14 @@ import { joinPath } from './lib/path';
 import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
 import { useCueOps } from './hooks/useCueOps';
+import { useOutPath } from './hooks/useOutPath';
+import { useTrackOps } from './hooks/useTrackOps';
 import { useExportStore } from './state/exportStore';
 import { useAppEnvStore } from './state/appEnvStore';
 import { useDocStore } from './state/docStore';
 import { useModalStore } from './state/modalStore';
 import { ModalsHost } from './containers/ModalsHost';
+import { SidebarContainer } from './containers/SidebarContainer';
 
 interface LogLine {
   time: string;
@@ -115,9 +116,7 @@ function AppContent({
   const setContainer = useExportStore((s) => s.setContainer);
   const destFolder = useExportStore((s) => s.destFolder);
   const setDestFolder = useExportStore((s) => s.setDestFolder);
-  const overrideName = useExportStore((s) => s.overrideName);
   const setOverrideName = useExportStore((s) => s.setOverrideName);
-  const customName = useExportStore((s) => s.customName);
   const setCustomName = useExportStore((s) => s.setCustomName);
   const destInited = useRef(false);
 
@@ -318,6 +317,13 @@ function AppContent({
     mergeCue,
     duplicateCue,
   } = useCueOps(previewT);
+
+  const { toggleKeep, setDefault, setForced, updateSub, removeSub } = useTrackOps({
+    toast,
+    t,
+  });
+
+  const { outName, outPath } = useOutPath(settings.exportUseContentFolder);
 
   const warnThresholds: CueWarningThresholds = useMemo(
     () => ({
@@ -653,89 +659,6 @@ function AppContent({
       if (tr?.kind === 'A') setPreviewAudioId(tid);
     }
   };
-
-  const toggleKeep = (id: number) => {
-    pushUndo();
-    setTracks((tr) =>
-      tr.map((track) => {
-        if (track.id !== id) return track;
-        if (track.locked) {
-          toast(t('video_locked_tip'), 'warn');
-          return track;
-        }
-        return { ...track, keep: !track.keep };
-      }),
-    );
-  };
-
-  const setDefault = (id: number) => {
-    pushUndo();
-    const target = tracks.find((x) => x.id === id);
-    if (!target) return;
-    setTracks((tr) =>
-      tr.map((t) => ({
-        ...t,
-        def: t.kind === target.kind ? t.id === id : t.def,
-      })),
-    );
-  };
-
-  const setForced = (id: number) => {
-    pushUndo();
-    setTracks((tr) => tr.map((t) => (t.id === id ? { ...t, forced: !t.forced } : t)));
-  };
-
-  const updateSub = (id: string, patch: Partial<ExternalSub>) => {
-    setExtSubs((s) => s.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  };
-
-  const removeSub = (id: string) => {
-    setExtSubs((s) => s.filter((x) => x.id !== id));
-    setCuesBySubId((m) => {
-      if (!(id in m)) return m;
-      const n = { ...m };
-      delete n[id];
-      return n;
-    });
-    setEditedSubIds((s) => {
-      if (!s.has(id)) return s;
-      const n = new Set(s);
-      n.delete(id);
-      return n;
-    });
-    if (activeSubId === id) {
-      const rest = extSubs.filter((x) => x.id !== id);
-      setActiveSubId(rest[0]?.id ?? null);
-    }
-  };
-
-  const outName = useMemo(() => {
-    const c = container.toLowerCase();
-    if (overrideName) {
-      const stem = customName.trim() || title.trim();
-      if (stem) return `${stem}.${c}`;
-    }
-    if (contentType === 'movie') return `${title} (${year}).${c}`;
-    return `${title} - S${season}E${episode}.${c}`;
-  }, [overrideName, customName, container, contentType, title, year, season, episode]);
-
-  const outPath = useMemo(() => {
-    if (!settings.exportUseContentFolder) {
-      return joinPath(isWin, destFolder, outName);
-    }
-    const base = contentType === 'movie' ? `${title} (${year})` : `${title} S${season}E${episode}`;
-    return joinPath(isWin, destFolder, base, outName);
-  }, [
-    isWin,
-    destFolder,
-    contentType,
-    title,
-    year,
-    season,
-    episode,
-    outName,
-    settings.exportUseContentFolder,
-  ]);
 
   const estSize = useMemo(() => {
     if (!file) return 0;
@@ -1115,11 +1038,6 @@ function AppContent({
     [exporting, t, toast, runExportJob, refreshHistory, pushLog, closeModal],
   );
 
-  const browseDest = async () => {
-    const d = await window.api.dialog.chooseFolder(destFolder);
-    if (d) setDestFolder(d);
-  };
-
   const menuRef = useRef({
     pickSrtFiles,
     handleExport,
@@ -1304,55 +1222,7 @@ function AppContent({
       />
 
       <div className="main">
-        <aside className="col-left">
-          <SourcePanel file={file} onOpenFile={() => openModal('open')} />
-          <ContentDetails
-            contentType={contentType}
-            onContentType={setContentType}
-            title={title}
-            onTitle={(v) => {
-              setTitle(v);
-              if (overrideName) setCustomName(v);
-            }}
-            year={year}
-            onYear={setYear}
-            season={season}
-            onSeason={setSeason}
-            episode={episode}
-            onEpisode={setEpisode}
-            container={container}
-            onContainer={(c) => {
-              setContainer(c);
-              void setOne('defaultContainer', c.toLowerCase() as 'mkv' | 'mp4');
-            }}
-            destFolder={destFolder}
-            onDestFolder={setDestFolder}
-            onBrowseFolder={() => void browseDest()}
-            exportUseContentFolder={settings.exportUseContentFolder}
-            onExportUseContentFolder={(v) => void setOne('exportUseContentFolder', v)}
-            overrideName={overrideName}
-            onOverrideName={(v) => {
-              setOverrideName(v);
-              if (v && !customName.trim()) {
-                const stem = outName.replace(/\.[^.]+$/, '');
-                setCustomName(stem);
-                setTitle(stem);
-              }
-            }}
-            customName={customName}
-            onCustomName={(v) => {
-              setCustomName(v);
-              if (overrideName) setTitle(v);
-            }}
-          />
-          <div className="out-card">
-            <div className="out-l">{t('will_save_as')}</div>
-            <div className="out-n mono" title={outPath}>
-              {outName}
-            </div>
-            <div className="out-path mono">{outPath}</div>
-          </div>
-        </aside>
+        <SidebarContainer settings={settings} setOne={setOne} />
 
         <main className="col-center">
           {file && (
