@@ -661,6 +661,8 @@ export function registerIpc(): void {
 
   ipcMain.handle('fs:stat', async (_e, p: string) => {
     try {
+      assertString(p, 'path');
+      assertAbsPath(p, 'path');
       const s = await fs.stat(p);
       return { size: s.size, mtimeMs: s.mtimeMs };
     } catch {
@@ -668,8 +670,16 @@ export function registerIpc(): void {
     }
   });
 
-  ipcMain.handle('shell:openPath', async (_e, p: string) => shell.openPath(p));
-  ipcMain.handle('shell:showItem', async (_e, p: string) => shell.showItemInFolder(p));
+  ipcMain.handle('shell:openPath', async (_e, p: string) => {
+    assertString(p, 'path');
+    assertAbsPath(p, 'path');
+    return shell.openPath(p);
+  });
+  ipcMain.handle('shell:showItem', async (_e, p: string) => {
+    assertString(p, 'path');
+    assertAbsPath(p, 'path');
+    shell.showItemInFolder(p);
+  });
   ipcMain.handle('shell:userData', async () => userDataPath());
 
   ipcMain.handle('app:platform', async () => process.platform);

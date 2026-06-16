@@ -34,7 +34,7 @@ export interface ModalsHostCtx {
   toast: (msg: string, kind?: ToastKind) => void;
   seekToFileCue: (t: number) => void;
   updateSub: (id: string, patch: Partial<ExternalSub>) => void;
-  shiftAllCues: (deltaSec: number, fromIdx: number) => void;
+  shiftAllCues: (deltaSec: number, fromIdx: number, speed?: number) => void;
   setCuesForActiveSub: (next: SrtCue[]) => void;
   duplicateCue: (idx: number) => void;
   doMuxExport: () => Promise<void>;
@@ -168,7 +168,7 @@ export function ModalsHost({ ctx }: Props) {
         <AdjustAllTimesModal
           cueCount={cues.length}
           selectedCueIdx={previewSelectedIdx}
-          onApply={(deltaSec, fromIdx) => shiftAllCues(deltaSec, fromIdx)}
+          onApply={(deltaSec, fromIdx, speed) => shiftAllCues(deltaSec, fromIdx, speed)}
           onClose={() => closeModal('adjustAll')}
         />
       )}
