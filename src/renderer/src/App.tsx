@@ -9,6 +9,7 @@ import type {
   Track,
 } from '@shared/types';
 import { fileTimeFromMediaTime, mediaTimeForCueStart } from '@shared/cue-sync';
+import { parseEpisodeToken } from '@shared/episode-match';
 import { TopBar } from './components/TopBar';
 import { SourcePanel } from './components/SourcePanel';
 import { ContentDetails } from './components/ContentDetails';
@@ -611,6 +612,14 @@ function AppContent({
     setOverrideName(false);
     setCustomName('');
     setContainer(f.container || 'MKV');
+    // Auto-detect a series episode from the filename so the user doesn't retype
+    // SxxExx for every episode.
+    const tok = parseEpisodeToken(f.name);
+    if (tok.episode != null) {
+      setContentType('series');
+      setSeason(String(tok.season ?? 1).padStart(2, '0'));
+      setEpisode(String(tok.episode).padStart(2, '0'));
+    }
     pushLog(`נטען: ${f.name}`, 'info');
     pushLog(
       `probe ok · streams=${f.tracks.length} · audio=${f.tracks.filter((x) => x.kind === 'A').length} · subs=${f.tracks.filter((x) => x.kind === 'S').length}`,
