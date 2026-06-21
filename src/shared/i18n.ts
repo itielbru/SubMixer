@@ -326,6 +326,11 @@ export const translations = {
     series_field_out: 'תיקיית יעד',
     series_preset_hint: 'היסט · מהירות — מוחל על כל הפרקים',
     series_run: 'הוסף לתור והרץ',
+    sync_apply_all: 'החל על כל הכתוביות',
+    sync_apply_all_tip: 'החל את ההיסט והמהירות הנוכחיים על כל הכתוביות החיצוניות',
+    sync_applied_all: 'הסנכרון הוחל על כל הכתוביות',
+    redetect_encoding: 'זהה מחדש',
+    redetect_encoding_tip: 'קרא מחדש את הקובץ וזהה אוטומטית את הקידוד (לתיקון טקסט משובש)',
 
     ffmpeg_missing_title: 'FFmpeg חסר',
     ffmpeg_missing_msg: 'FFmpeg / FFprobe לא נמצאו.',
@@ -681,6 +686,11 @@ export const translations = {
     series_field_out: 'Destination',
     series_preset_hint: 'offset · speed — applied to every episode',
     series_run: 'Queue & run',
+    sync_apply_all: 'Apply to all subtitles',
+    sync_apply_all_tip: 'Apply the current offset and speed to every external subtitle',
+    sync_applied_all: 'Sync applied to all subtitles',
+    redetect_encoding: 'Re-detect',
+    redetect_encoding_tip: 'Re-read the file and auto-detect its encoding (fixes garbled text)',
 
     ffmpeg_missing_title: 'FFmpeg Missing',
     ffmpeg_missing_msg: 'FFmpeg / FFprobe were not found.',

@@ -17,6 +17,8 @@ interface Props {
   onExportSrt?: (sub: ExternalSub) => void;
   onVisualSync?: () => void;
   onDropFiles?: (paths: string[]) => void;
+  onApplySyncToAll?: (offset: number, speed: number) => void;
+  onRedetectEncoding?: (sub: ExternalSub) => void;
 }
 
 export function SubsDrawer({
@@ -30,6 +32,8 @@ export function SubsDrawer({
   onExportSrt,
   onVisualSync,
   onDropFiles,
+  onApplySyncToAll,
+  onRedetectEncoding,
 }: Props) {
   const { t } = useT();
   const [manualOpen, setManualOpen] = useState(false);
@@ -166,6 +170,18 @@ export function SubsDrawer({
             {manualOpen ? t('manual_tune_collapse') : t('manual_tune_expand')}
           </button>
 
+          {extSubs.length > 1 && onApplySyncToAll && (
+            <button
+              className="btn ghost compact full-width"
+              type="button"
+              title={t('sync_apply_all_tip')}
+              onClick={() => onApplySyncToAll(sub.offset, sub.speed)}
+              disabled={!globalActive}
+            >
+              {t('sync_apply_all')}
+            </button>
+          )}
+
           {manualOpen && (
             <div className="manual-tune-panel">
               <div className="ext-sect small">{t('manual_tune_section')}</div>
@@ -253,11 +269,23 @@ export function SubsDrawer({
           </div>
           <div className="field">
             <label>{t('sub_encoding')}</label>
-            <Dropdown
-              value={sub.encoding}
-              onChange={(v) => onUpdateSub(sub.id, { encoding: v })}
-              options={['UTF-8', 'Windows-1255', 'Windows-1252', 'UTF-16']}
-            />
+            <div className="grp">
+              <Dropdown
+                value={sub.encoding}
+                onChange={(v) => onUpdateSub(sub.id, { encoding: v })}
+                options={['UTF-8', 'Windows-1255', 'Windows-1252', 'UTF-16']}
+              />
+              {onRedetectEncoding && (
+                <button
+                  className="btn ghost compact"
+                  type="button"
+                  title={t('redetect_encoding_tip')}
+                  onClick={() => onRedetectEncoding(sub)}
+                >
+                  <Ico d={I.reset} size={11} /> {t('redetect_encoding')}
+                </button>
+              )}
+            </div>
           </div>
           <div className="flag-row">
             <label className="cb" onClick={() => onUpdateSub(sub.id, { def: !sub.def })}>

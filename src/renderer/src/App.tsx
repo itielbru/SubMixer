@@ -725,7 +725,38 @@ function AppContent({
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files[0] as File & { path?: string };
-    if (f?.path) void loadFile(f.path);
+    if (!f?.path) return;
+    // Route subtitle files to the add-subtitle flow instead of trying to probe
+    // them as a video (which would fail).
+    if (/\.(srt|vtt|ass|ssa)$/i.test(f.path)) void addSrtFromPaths([f.path]);
+    else void loadFile(f.path);
+  };
+
+  const applySyncToAll = (offset: number, speed: number): void => {
+    setExtSubs((subs) => subs.map((s) => ({ ...s, offset, speed })));
+    toast(t('sync_applied_all'), 'ok');
+  };
+
+  const redetectEncoding = async (sub: ExternalSub): Promise<void> => {
+    const r = await window.api.srt.read(sub.path);
+    if (!r.ok || !r.cues) {
+      toast(r.error || t('load_error'), 'err');
+      return;
+    }
+    const cues = r.cues;
+    setCuesBySubId((m) => ({ ...m, [sub.id]: cues }));
+    setExtSubs((subs) =>
+      subs.map((s) =>
+        s.id === sub.id ? { ...s, encoding: r.encoding || s.encoding, cues: cues.length } : s
+      )
+    );
+    setEditedSubIds((s) => {
+      if (!s.has(sub.id)) return s;
+      const n = new Set(s);
+      n.delete(sub.id);
+      return n;
+    });
+    toast(`${t('sub_encoding')}: ${r.encoding ?? '—'}`, 'ok');
   };
 
   const onSelectRow = (id: string) => {
@@ -1400,6 +1431,8 @@ function AppContent({
             onRemoveSub={removeSub}
             onUpdateSub={updateSub}
             onExportSrt={(s) => void handleExportSrt(s)}
+            onApplySyncToAll={applySyncToAll}
+            onRedetectEncoding={(s) => void redetectEncoding(s)}
             fileEdited={!!activeSubId && editedSubIds.has(activeSubId)}
             onVisualSync={() => {
               if (cues.length > 0) {
