@@ -495,8 +495,6 @@ export function registerIpc(): void {
           durationSec,
         });
       }
-      // Clean up the temp SRTs after export
-      await clearTempSrt();
       return {
         ok: result.ok,
         code: result.code,
@@ -505,6 +503,10 @@ export function registerIpc(): void {
       };
     } catch (err) {
       return { ok: false, code: null, cancelled: false, error: (err as Error).message };
+    } finally {
+      // Always clean up the temp SRTs — even on cancel, validation failure, or a
+      // throw in prepareExternalSubs/runExport — so they never leak across a session.
+      await clearTempSrt().catch(() => undefined);
     }
   });
 

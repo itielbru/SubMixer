@@ -182,7 +182,8 @@ function AppContent({
     if (key && coalesceKey.current === key) return;
     const current = cuesRef.current[subId];
     if (!current) return;
-    undoStack.current.push({ kind: 'cues', subId, cues: current });
+    // Store a copy so the undo entry can never be aliased by later in-place edits.
+    undoStack.current.push({ kind: 'cues', subId, cues: current.slice() });
     if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.shift();
     redoStack.current = [];
     coalesceKey.current = key;
@@ -299,6 +300,16 @@ function AppContent({
   const updateCue = useCallback(
     (idx: number, patch: Partial<SrtCue>) => {
       if (!activeSubId) return;
+      // Ignore no-op updates: they would push a useless undo entry and, worse,
+      // mark the subtitle "edited" — which raises a spurious double-apply-offset
+      // warning at export even though nothing actually changed.
+      const existing = cuesRef.current[activeSubId]?.[idx];
+      if (existing) {
+        const changed = (Object.keys(patch) as (keyof SrtCue)[]).some(
+          (k) => patch[k] !== existing[k]
+        );
+        if (!changed) return;
+      }
       snapshotCues(activeSubId, `upd:${activeSubId}:${idx}`);
       setCuesBySubId((m) => {
         const list = m[activeSubId];
@@ -971,7 +982,7 @@ function AppContent({
     }
     plan.externalSubs = planExt;
     const item: BatchItem = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: crypto.randomUUID(),
       label: outName,
       plan,
       durationSec: file.durationSec,
@@ -1030,7 +1041,12 @@ function AppContent({
 
   const browseDest = async () => {
     const d = await window.api.dialog.chooseFolder(destFolder);
-    if (d) setDestFolder(d);
+    if (d) {
+      setDestFolder(d);
+      // Remember the destination immediately so it survives an app restart,
+      // not only after a successful export.
+      void setOne('defaultDestFolder', d);
+    }
   };
 
   const menuRef = useRef({

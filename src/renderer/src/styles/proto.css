@@ -56,11 +56,13 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
 .proto .icon-btn.ghost:hover { background: var(--surface-2); }
 
 /* MAIN */
-.proto .main { display:grid; grid-template-columns: 320px 1fr 360px; min-height:0; overflow:hidden; }
+.proto .main { display:grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(300px, 360px);
+  min-height:0; overflow:hidden; }
 .proto .col-left, .proto .col-right { padding: 18px; overflow:auto; display:flex; flex-direction:column; gap:18px;
   border-inline-start:1px solid var(--border); }
 .proto .col-left { border-inline-start: none; border-inline-end:1px solid var(--border); }
-.proto .col-center { display:flex; flex-direction:column; min-height:0; }
+.proto .col-center { display:flex; flex-direction:column; min-height:0; min-width:0; }
 
 .proto .center-tabs { display:flex; gap: 2px; padding: 8px 14px 0 14px;
   background: var(--bg-2); border-bottom: 1px solid var(--border); }
@@ -333,7 +335,7 @@ html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: 
   background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer; transition: .1s; }
 .proto .bidi-btn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 
-.proto .vp { display:flex; flex-direction:column; gap: 10px; direction: ltr; }
+.proto .vp { display:flex; flex-direction:column; gap: 10px; direction: ltr; min-height: 0; }
 .proto .vp-stage { position:relative; background:#000; border-radius:8px;
   overflow:hidden; width:100%; aspect-ratio: 16/9; max-height: min(56vh, 480px);
   container-type: size; margin-inline: auto;
