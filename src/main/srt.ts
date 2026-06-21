@@ -266,6 +266,15 @@ export async function readSrtFile(
     cues = parseSrt(text);
   }
 
+  // A file with real content but zero parseable cues is almost always a binary
+  // or non-subtitle file picked by mistake. Fail loudly at add-time instead of
+  // silently accepting "0 cues" and surfacing a cryptic FFmpeg error at export.
+  if (cues.length === 0 && buf.byteLength > 64) {
+    throw new Error(
+      `No subtitle cues found in "${path.basename(filePath)}" — it may not be a valid SRT/VTT/ASS file or uses an unsupported format.`
+    );
+  }
+
   return {
     cues,
     encoding: detected,

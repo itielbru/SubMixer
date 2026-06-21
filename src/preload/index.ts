@@ -8,6 +8,8 @@ import type {
   ExportRecord,
   FFmpegStatus,
   SrtCue,
+  SeriesScanResult,
+  SeriesScanProgress,
 } from '../shared/types';
 import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from '../shared/preview';
 
@@ -107,6 +109,16 @@ const api = {
       const handler = (_e: IpcRendererEvent, line: string) => cb(line);
       ipcRenderer.on('export:log', handler);
       return () => ipcRenderer.removeListener('export:log', handler);
+    },
+  },
+
+  series: {
+    scan: (folderPath: string): Promise<SeriesScanResult> =>
+      ipcRenderer.invoke('series:scan', folderPath),
+    onScanProgress: (cb: (p: SeriesScanProgress) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, p: SeriesScanProgress) => cb(p);
+      ipcRenderer.on('series:scanProgress', handler);
+      return () => ipcRenderer.removeListener('series:scanProgress', handler);
     },
   },
 

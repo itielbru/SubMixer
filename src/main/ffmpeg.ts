@@ -15,6 +15,7 @@ import type {
 const execFileAsync = promisify(execFile);
 
 let cachedStatus: FFmpegStatus | null = null;
+let cachedStatusPromise: Promise<FFmpegStatus> | null = null;
 
 // ── Binary discovery ────────────────────────────────────────────────────────
 
@@ -57,35 +58,41 @@ async function findOnPath(binary: string): Promise<string | null> {
 }
 
 export async function findBinaries(force = false): Promise<FFmpegStatus> {
-  if (cachedStatus && !force) return cachedStatus;
+  // Reuse an in-flight discovery so concurrent callers don't double-spawn
+  // `where/which` + `-version`. `force` recomputes from scratch.
+  if (!force && cachedStatusPromise) return cachedStatusPromise;
 
-  // Search local/embedded paths first, fallback to system PATH
-  let ffmpegPath = await findLocalBinary('ffmpeg');
-  if (!ffmpegPath) {
-    ffmpegPath = await findOnPath('ffmpeg');
-  }
-
-  let ffprobePath = await findLocalBinary('ffprobe');
-  if (!ffprobePath) {
-    ffprobePath = await findOnPath('ffprobe');
-  }
-
-  let version: string | null = null;
-  if (ffmpegPath) {
-    try {
-      const { stdout } = await execFileAsync(ffmpegPath, ['-version'], { windowsHide: true });
-      version = stdout.split('\n')[0]?.trim() ?? null;
-    } catch {
-      // ignore
+  cachedStatusPromise = (async (): Promise<FFmpegStatus> => {
+    // Search local/embedded paths first, fallback to system PATH
+    let ffmpegPath = await findLocalBinary('ffmpeg');
+    if (!ffmpegPath) {
+      ffmpegPath = await findOnPath('ffmpeg');
     }
-  }
-  cachedStatus = {
-    available: !!(ffmpegPath && ffprobePath),
-    ffmpegPath,
-    ffprobePath,
-    version,
-  };
-  return cachedStatus;
+
+    let ffprobePath = await findLocalBinary('ffprobe');
+    if (!ffprobePath) {
+      ffprobePath = await findOnPath('ffprobe');
+    }
+
+    let version: string | null = null;
+    if (ffmpegPath) {
+      try {
+        const { stdout } = await execFileAsync(ffmpegPath, ['-version'], { windowsHide: true });
+        version = stdout.split('\n')[0]?.trim() ?? null;
+      } catch {
+        // ignore
+      }
+    }
+    cachedStatus = {
+      available: !!(ffmpegPath && ffprobePath),
+      ffmpegPath,
+      ffprobePath,
+      version,
+    };
+    return cachedStatus;
+  })();
+
+  return cachedStatusPromise;
 }
 
 function ensure(status: FFmpegStatus): asserts status is FFmpegStatus & {
@@ -390,12 +397,21 @@ export async function extractAudioPreview(
       }
     });
 
-    child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      // Remove any partial output so cancelled/failed extractions don't leak.
+      fs.unlink(outPath).catch(() => undefined);
+      rejectP(err);
+    });
     child.on('close', (code) => {
       clearTimeout(timer);
       activePreview = null;
       if (code === 0) resolveP(outPath);
-      else rejectP(new Error(`ffmpeg exited with code ${code}`));
+      else {
+        // Cancelled (SIGINT) or failed: drop the partial M4A.
+        fs.unlink(outPath).catch(() => undefined);
+        rejectP(new Error(`ffmpeg exited with code ${code}`));
+      }
     });
   });
 }
@@ -606,9 +622,49 @@ function parseFfmpegError(stderr: string): string {
 }
 
 /** Escape a path for use inside the ffmpeg `subtitles=` filter value (wrapped in
- *  single quotes by the caller): forward slashes + escaped drive colon. */
+ *  single quotes by the caller): forward slashes, escaped drive colon, and
+ *  escaped single quotes so paths containing an apostrophe don't break the
+ *  filter graph. */
 function escapeSubtitlesFilterPath(p: string): string {
-  return p.replace(/\\/g, '/').replace(/:/g, '\\:');
+  return p
+    .replace(/\\/g, '/')
+    .replace(/'/g, "\\'")
+    .replace(/:/g, '\\:');
+}
+
+/** Convert a `#rrggbb` hex string to an ASS colour literal `&HAABBGGRR`
+ *  (alpha 00 = fully opaque in ASS). Falls back to opaque white. */
+function hexToAssColor(hex: string): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec((hex || '').trim());
+  if (!m) return '&H00FFFFFF';
+  const r = m[1].slice(0, 2);
+  const g = m[1].slice(2, 4);
+  const b = m[1].slice(4, 6);
+  return `&H00${b}${g}${r}`.toUpperCase();
+}
+
+/** Build a libass `force_style` string from the user's subtitle appearance so a
+ *  burned-in subtitle matches the live preview. */
+function buildForceStyle(style: ExportPlan['burnInStyle']): string {
+  const color = hexToAssColor(style?.color ?? '#ffffff');
+  // Preview scales a clamped font; 24pt is a sane SD baseline to scale from.
+  const fontSize = Math.max(8, Math.round(24 * (style?.fontScale ?? 1)));
+  // 2 = bottom-center, 8 = top-center (libass numpad alignment).
+  const alignment = style?.position === 'top' ? 8 : 2;
+  const parts = [`PrimaryColour=${color}`, `FontSize=${fontSize}`, `Alignment=${alignment}`];
+  switch (style?.style) {
+    case 'box':
+      parts.push('BorderStyle=3', 'Outline=1', 'Shadow=0');
+      break;
+    case 'none':
+      parts.push('BorderStyle=1', 'Outline=0', 'Shadow=1');
+      break;
+    case 'outline':
+    default:
+      parts.push('BorderStyle=1', 'Outline=2', 'Shadow=0');
+      break;
+  }
+  return parts.join(',');
 }
 
 export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): string[] {
@@ -649,7 +705,8 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
   if (plan.videoTrackId !== null) {
     if (burning) {
       const esc = escapeSubtitlesFilterPath(processedSubPaths[burnIdx]);
-      args.push('-vf', `subtitles='${esc}':force_style='Outline=2,Shadow=0'`);
+      const forceStyle = buildForceStyle(plan.burnInStyle);
+      args.push('-vf', `subtitles='${esc}':force_style='${forceStyle}'`);
       args.push('-c:v', 'libx264', '-preset', 'faster', '-crf', '20', '-pix_fmt', 'yuv420p');
     } else {
       args.push('-c:v', 'copy');
@@ -846,8 +903,18 @@ export function buildCommandString(plan: ExportPlan, processedSubPaths: string[]
   const status = cachedStatus;
   const ff = status?.ffmpegPath ? path.basename(status.ffmpegPath) : 'ffmpeg';
   const args = buildExportArgs(plan, processedSubPaths);
+  const isWin = process.platform === 'win32';
   const quoted = args
-    .map((a) => (/[\s"']/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a))
+    .map((a) => {
+      if (!/[\s"'\\]/.test(a)) return a;
+      if (isWin) {
+        // cmd/PowerShell: double-quote and escape inner quotes + backslashes so
+        // paths like C:\temp\file.srt survive a copy-paste verbatim.
+        return `"${a.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+      }
+      // POSIX shells: single-quote, closing/reopening around any inner quote.
+      return `'${a.replace(/'/g, "'\\''")}'`;
+    })
     .join(' ');
   return `${ff} ${quoted}`;
 }

@@ -47,7 +47,10 @@ import type {
   AddSubResult,
   ExternalSub,
   SrtCue,
+  SeriesScanItem,
+  SeriesScanResult,
 } from '@shared/types';
+import { matchSubsToVideos } from '@shared/episode-match';
 import { t } from '@shared/i18n';
 import type { AgentDebugPayload } from '@shared/agent-debug';
 import { PREVIEW_QUICK_SECONDS, type PreviewProgress } from '@shared/preview';
@@ -180,6 +183,57 @@ export function registerIpc(): void {
       return { ok: false, error: (err as Error).message };
     } finally {
       peaksInFlight = false;
+    }
+  });
+
+  // ── Series scan (folder → matched video/subtitle pairs) ──────────────────
+  ipcMain.handle('series:scan', async (event, folderPath: string): Promise<SeriesScanResult> => {
+    try {
+      assertString(folderPath, 'folderPath');
+      assertAbsPath(folderPath, 'folderPath');
+      const VIDEO_EXTS = new Set(['.mkv', '.mp4', '.m4v', '.mov', '.avi', '.webm', '.ts']);
+      const SUB_EXTS = new Set(['.srt', '.vtt', '.ass', '.ssa']);
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      const files = entries
+        .filter((e) => e.isFile())
+        .map((e) => path.join(folderPath, e.name));
+      const videos = files
+        .filter((f) => VIDEO_EXTS.has(path.extname(f).toLowerCase()))
+        .sort((a, b) => a.localeCompare(b));
+      const subs = files.filter((f) => SUB_EXTS.has(path.extname(f).toLowerCase()));
+      if (videos.length === 0) {
+        return { ok: false, error: 'No video files were found in the selected folder.' };
+      }
+
+      const pairs = matchSubsToVideos(videos, subs);
+      const win = senderWindow(event);
+      const items: SeriesScanItem[] = [];
+      for (let i = 0; i < pairs.length; i++) {
+        const p = pairs[i];
+        win?.webContents.send('series:scanProgress', { done: i, total: pairs.length });
+        const item: SeriesScanItem = {
+          videoPath: p.video,
+          videoName: path.basename(p.video),
+          subPath: p.sub,
+          subName: p.sub ? path.basename(p.sub) : null,
+          season: p.season,
+          episode: p.episode,
+          durationSec: 0,
+        };
+        try {
+          const media = await probe(p.video);
+          allowedMediaPaths.add(path.resolve(p.video));
+          item.media = media;
+          item.durationSec = media.durationSec;
+        } catch (err) {
+          item.error = (err as Error).message;
+        }
+        items.push(item);
+      }
+      win?.webContents.send('series:scanProgress', { done: pairs.length, total: pairs.length });
+      return { ok: true, items };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
     }
   });
 
@@ -495,8 +549,6 @@ export function registerIpc(): void {
           durationSec,
         });
       }
-      // Clean up the temp SRTs after export
-      await clearTempSrt();
       return {
         ok: result.ok,
         code: result.code,
@@ -505,6 +557,10 @@ export function registerIpc(): void {
       };
     } catch (err) {
       return { ok: false, code: null, cancelled: false, error: (err as Error).message };
+    } finally {
+      // Always clean up the temp SRTs — even on cancel, validation failure, or a
+      // throw in prepareExternalSubs/runExport — so they never leak across a session.
+      await clearTempSrt().catch(() => undefined);
     }
   });
 

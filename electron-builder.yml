@@ -1,6 +1,6 @@
 appId: com.itiel.submixer
 productName: SubMixer
-copyright: Copyright © 2026 Itiel
+copyright: Copyright © 2026 Itiel Bruchyan
 # Local builds without a cert; avoids pulling winCodeSign (7z + symlinks need Admin or Developer Mode)
 forceCodeSigning: false
 asar: true
@@ -36,6 +36,12 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: SubMixer
+  # Show the MIT license page during install and offer to launch on finish.
+  license: LICENSE
+  runAfterFinish: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
 portable:
   artifactName: ${productName}-${version}-portable.${ext}
 fileAssociations:

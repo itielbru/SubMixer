@@ -13,6 +13,7 @@ interface Props {
   appVersion: string;
   ffVersion: string;
   onOpenFile: () => void;
+  onOpenSeries: () => void;
   onOpenHistory: () => void;
   onOpenSettings: () => void;
 }
@@ -27,6 +28,7 @@ export function TopBar({
   appVersion,
   ffVersion,
   onOpenFile,
+  onOpenSeries,
   onOpenHistory,
   onOpenSettings,
 }: Props) {
@@ -43,6 +45,9 @@ export function TopBar({
       </div>
       <button className="btn ghost" onClick={onOpenFile}>
         <Ico d={I.folder} /> {t('open_file')}
+      </button>
+      <button className="btn ghost" onClick={onOpenSeries} title={t('series_desc')}>
+        <Ico d={I.zap} /> {t('series_open')}
       </button>
       <div className="crumbs">
         <span>{contentType === 'movie' ? t('movie') : t('series')}</span>

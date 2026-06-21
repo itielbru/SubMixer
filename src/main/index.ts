@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { registerIpc, registerPreviewProtocol } from './ipc';
 import { buildMenu } from './menu';
 import { findBinaries, killActiveProcesses } from './ffmpeg';
+import { clearTempSrt } from './srt';
 import { getSettings } from './store';
 import { initLogger } from './logger';
 import { runStartupMaintenance } from './maintenance';
@@ -29,6 +30,10 @@ async function createWindow(): Promise<void> {
     height: 900,
     minWidth: 1100,
     minHeight: 680,
+    // Treat the sizes above as the web viewport (content), not the outer frame,
+    // so the renderer never receives a smaller area than expected and clips its
+    // fixed-width columns.
+    useContentSize: true,
     show: false,
     autoHideMenuBar: false,
     backgroundColor: '#0d0e11',
@@ -119,4 +124,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   log.info('App quitting — terminating active ffmpeg processes');
   killActiveProcesses();
+  // Best-effort: drop any leftover transformed-SRT temp files on the way out.
+  void clearTempSrt();
 });
