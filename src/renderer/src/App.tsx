@@ -28,6 +28,7 @@ import { FixCommonErrorsModal } from './components/modals/FixCommonErrorsModal';
 import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
 import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
+import { AboutModal } from './components/modals/AboutModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
@@ -149,6 +150,7 @@ function AppContent({
   );
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -870,8 +872,27 @@ function AppContent({
       metadataTitle: outName.replace(/\.[^.]+$/, ''),
       container: container.toLowerCase() === 'mp4' ? 'mp4' : 'mkv',
       burnInSubIndex,
+      burnInStyle: {
+        fontScale: settings.subFontScale,
+        color: settings.subColor,
+        style: settings.subStyle,
+        position: settings.subPosition,
+      },
     };
-  }, [file, tracks, extSubs, outPath, outName, container, settings.burnInSubs, activeSubId]);
+  }, [
+    file,
+    tracks,
+    extSubs,
+    outPath,
+    outName,
+    container,
+    settings.burnInSubs,
+    settings.subFontScale,
+    settings.subColor,
+    settings.subStyle,
+    settings.subPosition,
+    activeSubId,
+  ]);
 
   const openCmdModal = async () => {
     const plan = buildPlan();
@@ -1083,10 +1104,7 @@ function AppContent({
           ff.available ? 'ok' : 'warn'
         );
       });
-    const about = () =>
-      void window.api.app.version().then((v) =>
-        alert(`SubMixer ${v}\n\n${t('about_text')}`)
-      );
+    const about = () => setShowAbout(true);
 
     const unsubs = [
       window.api.menu.on('menu:openFile', openFile),
@@ -1425,6 +1443,8 @@ function AppContent({
           onClearDone={() => setBatchQueue((q) => q.filter((x) => x.status === 'pending' || x.status === 'running'))}
         />
       )}
+
+      {showAbout && <AboutModal version={appVer} onClose={() => setShowAbout(false)} />}
 
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>

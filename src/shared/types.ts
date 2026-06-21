@@ -82,6 +82,15 @@ export interface ExportPlan {
    *  instead of muxing it as a soft track. Requires re-encoding the video.
    *  null = normal soft-subtitle mux. */
   burnInSubIndex: number | null;
+  /** Appearance applied to a burned-in subtitle (mapped to libass force_style).
+   *  Mirrors the preview overlay so what you see is what gets baked in.
+   *  Ignored when soft-muxing. */
+  burnInStyle?: {
+    fontScale: number;
+    color: string;
+    style: SubStyleMode;
+    position: 'bottom' | 'top';
+  };
 }
 
 export interface ExportProgress {

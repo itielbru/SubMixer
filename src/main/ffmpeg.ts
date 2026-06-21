@@ -632,6 +632,41 @@ function escapeSubtitlesFilterPath(p: string): string {
     .replace(/:/g, '\\:');
 }
 
+/** Convert a `#rrggbb` hex string to an ASS colour literal `&HAABBGGRR`
+ *  (alpha 00 = fully opaque in ASS). Falls back to opaque white. */
+function hexToAssColor(hex: string): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec((hex || '').trim());
+  if (!m) return '&H00FFFFFF';
+  const r = m[1].slice(0, 2);
+  const g = m[1].slice(2, 4);
+  const b = m[1].slice(4, 6);
+  return `&H00${b}${g}${r}`.toUpperCase();
+}
+
+/** Build a libass `force_style` string from the user's subtitle appearance so a
+ *  burned-in subtitle matches the live preview. */
+function buildForceStyle(style: ExportPlan['burnInStyle']): string {
+  const color = hexToAssColor(style?.color ?? '#ffffff');
+  // Preview scales a clamped font; 24pt is a sane SD baseline to scale from.
+  const fontSize = Math.max(8, Math.round(24 * (style?.fontScale ?? 1)));
+  // 2 = bottom-center, 8 = top-center (libass numpad alignment).
+  const alignment = style?.position === 'top' ? 8 : 2;
+  const parts = [`PrimaryColour=${color}`, `FontSize=${fontSize}`, `Alignment=${alignment}`];
+  switch (style?.style) {
+    case 'box':
+      parts.push('BorderStyle=3', 'Outline=1', 'Shadow=0');
+      break;
+    case 'none':
+      parts.push('BorderStyle=1', 'Outline=0', 'Shadow=1');
+      break;
+    case 'outline':
+    default:
+      parts.push('BorderStyle=1', 'Outline=2', 'Shadow=0');
+      break;
+  }
+  return parts.join(',');
+}
+
 export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): string[] {
   const args: string[] = ['-y', '-hide_banner', '-stats'];
 
@@ -670,7 +705,8 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
   if (plan.videoTrackId !== null) {
     if (burning) {
       const esc = escapeSubtitlesFilterPath(processedSubPaths[burnIdx]);
-      args.push('-vf', `subtitles='${esc}':force_style='Outline=2,Shadow=0'`);
+      const forceStyle = buildForceStyle(plan.burnInStyle);
+      args.push('-vf', `subtitles='${esc}':force_style='${forceStyle}'`);
       args.push('-c:v', 'libx264', '-preset', 'faster', '-crf', '20', '-pix_fmt', 'yuv420p');
     } else {
       args.push('-c:v', 'copy');

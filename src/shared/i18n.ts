@@ -309,6 +309,9 @@ export const translations = {
     ffmpeg_not_found: 'FFmpeg לא נמצא',
     about_text:
       'Electron + React + FFmpeg (מוטמע או PATH).\n\nFFmpeg מופץ תחת רישיון GPLv3. רישיונות צד-שלישי מלאים: ראה THIRD-PARTY-LICENSES.md.',
+    about_title: 'אודות',
+    about_repo: 'דף הפרויקט ב-GitHub',
+    about_licenses: 'רישיונות צד-שלישי',
 
     ffmpeg_missing_title: 'FFmpeg חסר',
     ffmpeg_missing_msg: 'FFmpeg / FFprobe לא נמצאו.',
@@ -647,6 +650,9 @@ export const translations = {
     ffmpeg_not_found: 'FFmpeg not found',
     about_text:
       'Electron + React + FFmpeg (bundled or PATH).\n\nFFmpeg is distributed under the GPLv3 license. Full third-party licenses: see THIRD-PARTY-LICENSES.md.',
+    about_title: 'About',
+    about_repo: 'Project on GitHub',
+    about_licenses: 'Third-party licenses',
 
     ffmpeg_missing_title: 'FFmpeg Missing',
     ffmpeg_missing_msg: 'FFmpeg / FFprobe were not found.',
