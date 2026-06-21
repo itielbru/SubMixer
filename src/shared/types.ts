@@ -147,6 +147,31 @@ export interface AppSettings {
 
 export type SubStyleMode = 'outline' | 'box' | 'none';
 
+/** One auto-matched video↔subtitle pair produced by a Series-mode folder scan. */
+export interface SeriesScanItem {
+  videoPath: string;
+  videoName: string;
+  subPath: string | null;
+  subName: string | null;
+  season: number | null;
+  episode: number | null;
+  durationSec: number;
+  /** Probed media (tracks etc.) for building the export plan; absent on error. */
+  media?: MediaFile;
+  error?: string;
+}
+
+export interface SeriesScanResult {
+  ok: boolean;
+  items?: SeriesScanItem[];
+  error?: string;
+}
+
+export interface SeriesScanProgress {
+  done: number;
+  total: number;
+}
+
 export interface FFmpegStatus {
   available: boolean;
   ffmpegPath: string | null;

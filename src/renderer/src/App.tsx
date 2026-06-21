@@ -29,6 +29,7 @@ import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
 import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
 import { AboutModal } from './components/modals/AboutModal';
+import { SeriesModal, type SeriesRunOptions } from './components/modals/SeriesModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
@@ -151,6 +152,7 @@ function AppContent({
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [showBatchQueue, setShowBatchQueue] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [showSeries, setShowSeries] = useState(false);
   const [previewSelectedIdx, setPreviewSelectedIdx] = useState(-1);
   const [cmdStr, setCmdStr] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -1030,6 +1032,97 @@ function AppContent({
     showNotification('SubMixer', t('notify_batch_done'));
   };
 
+  const runSeries = (opts: SeriesRunOptions): void => {
+    const ext = opts.container === 'mp4' ? 'mp4' : 'mkv';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const sanitize = (s: string) => s.replace(/[<>:"/\\|?*]+/g, '').replace(/\s+/g, ' ').trim();
+    const sep = opts.outFolder.includes('\\') ? '\\' : '/';
+    const detectLang = (name: string | null): string => {
+      const m = name?.match(/\.(heb|eng|spa|ara|fre|fra|ger|deu|rus|jpn|por|ita|tur|nld|pol)\./i);
+      const l = m ? m[1].toLowerCase() : 'und';
+      return l === 'fra' ? 'fre' : l === 'deu' ? 'ger' : l;
+    };
+
+    const newItems: BatchItem[] = [];
+    for (const it of opts.items) {
+      const m = it.media;
+      if (!m) continue;
+      const v = m.tracks.find((tk) => tk.kind === 'V');
+      const audioTracks = m.tracks
+        .filter((tk) => tk.kind === 'A')
+        .map((tk) => ({ id: tk.id, lang: tk.lang, def: tk.def, forced: tk.forced, codecName: tk.codecName }));
+      const embeddedSubs = m.tracks
+        .filter((tk) => tk.kind === 'S')
+        .map((tk) => ({ id: tk.id, lang: tk.lang, def: tk.def, forced: tk.forced, codecName: tk.codecName }));
+      const namePart =
+        it.season != null && it.episode != null
+          ? `${opts.title} - S${pad(it.season)}E${pad(it.episode)}`
+          : it.episode != null
+            ? `${opts.title} - E${pad(it.episode)}`
+            : `${opts.title} - ${it.videoName.replace(/\.[^.]+$/, '')}`;
+      const outName = `${sanitize(namePart)}.${ext}`;
+      const outputPath = `${opts.outFolder.replace(/[/\\]$/, '')}${sep}${outName}`;
+      const hasSub = !!it.subPath;
+      const externalSubs = hasSub
+        ? [{
+            path: it.subPath as string,
+            lang: detectLang(it.subName),
+            def: false,
+            forced: false,
+            offset: opts.offset,
+            speed: opts.speed,
+            trackName: '',
+            encoding: '',
+          }]
+        : [];
+      const plan: ExportPlan = {
+        inputFile: it.videoPath,
+        externalSubs,
+        videoTrackId: v?.id ?? null,
+        audioTracks,
+        embeddedSubs,
+        outputPath,
+        metadataTitle: sanitize(namePart),
+        container: ext,
+        burnInSubIndex: settings.burnInSubs && hasSub ? 0 : null,
+        burnInStyle: {
+          fontScale: settings.subFontScale,
+          color: settings.subColor,
+          style: settings.subStyle,
+          position: settings.subPosition,
+        },
+      };
+      newItems.push({
+        id: crypto.randomUUID(),
+        label: outName,
+        plan,
+        durationSec: it.durationSec,
+        extSubs: externalSubs.map((s) => ({ path: s.path, offset: s.offset, speed: s.speed, encoding: s.encoding })),
+        status: 'pending',
+      });
+    }
+
+    if (newItems.length === 0) return;
+    setBatchQueue((q) => [...q, ...newItems]);
+    setShowSeries(false);
+    setShowBatchQueue(true);
+    toast(`${t('batch_added')}: ${newItems.length}`, 'ok');
+    void (async () => {
+      await runBatch(newItems, (idx, ok, cancelled, error) => {
+        const item = newItems[idx];
+        setBatchQueue((q) =>
+          q.map((x) =>
+            x.id === item.id
+              ? { ...x, status: ok ? 'done' : cancelled ? 'pending' : 'failed', error }
+              : x
+          )
+        );
+      });
+      await refreshHistory();
+      showNotification('SubMixer', t('notify_batch_done'));
+    })();
+  };
+
   const handleReExport = useCallback(async (plan: ExportPlan, durationSec: number): Promise<void> => {
     if (exporting) {
       toast(t('export_already_running'), 'warn');
@@ -1150,6 +1243,7 @@ function AppContent({
         appVersion={appVer}
         ffVersion={ffLine}
         onOpenFile={() => setShowOpen(true)}
+        onOpenSeries={() => setShowSeries(true)}
         onOpenHistory={() => void refreshHistory().then(() => setShowHistory(true))}
         onOpenSettings={() => setShowSettings(true)}
       />
@@ -1445,6 +1539,14 @@ function AppContent({
       )}
 
       {showAbout && <AboutModal version={appVer} onClose={() => setShowAbout(false)} />}
+
+      {showSeries && (
+        <SeriesModal
+          defaultDestFolder={destFolder || settings.defaultDestFolder}
+          onClose={() => setShowSeries(false)}
+          onRun={runSeries}
+        />
+      )}
 
       {dragOver && <div className="drop-overlay">{t('drag_overlay')}</div>}
     </div>
