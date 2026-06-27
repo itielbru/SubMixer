@@ -8,7 +8,7 @@ import type {
   SrtCue,
   Track,
 } from '@shared/types';
-import { fileTimeFromMediaTime, mediaTimeForCueStart, transformCues } from '@shared/cue-sync';
+import { mediaTimeForCueStart, transformCues } from '@shared/cue-sync';
 import { buildExportPlan } from '@shared/export-plan';
 import { estimateSubtitleOffset } from '@shared/auto-sync';
 import { TopBar } from './components/TopBar';
@@ -31,7 +31,6 @@ import { FindReplaceModal } from './components/modals/FindReplaceModal';
 import { ExportConfirmModal } from './components/modals/ExportConfirmModal';
 import { BatchQueueModal, type BatchItem } from './components/modals/BatchQueueModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { visibleLen } from './lib/cue-warnings';
 import { useToasts } from './hooks/useToasts';
 import { useSettings } from './hooks/useSettings';
 import { useExport } from './hooks/useExport';
@@ -39,15 +38,13 @@ import { usePreview } from './hooks/usePreview';
 import { joinPath } from './lib/path';
 import { showNotification } from './lib/notify';
 import { I18nProvider, useT } from './hooks/useTranslation';
+import { useUndoRedo } from './hooks/useUndoRedo';
+import { useCueEditing } from './hooks/useCueEditing';
 
 interface LogLine {
   time: string;
   level: 'info' | 'ok' | 'warn' | 'err';
   msg: string;
-}
-
-function cloneTracks(t: Track[]): Track[] {
-  return t.map((x) => ({ ...x }));
 }
 
 function AppContent({
@@ -156,73 +153,14 @@ function AppContent({
   const [dragOver, setDragOver] = useState(false);
 
   // ── Unified undo/redo: track toggles + cue edits, in one chronological stack ─
-  type HistoryEntry =
-    | { kind: 'tracks'; tracks: Track[] }
-    | { kind: 'cues'; subId: string; cues: SrtCue[] };
-  const HISTORY_LIMIT = 100;
-  const undoStack = useRef<HistoryEntry[]>([]);
-  const redoStack = useRef<HistoryEntry[]>([]);
-  // Coalesces a run of identical edits (e.g. dragging one cue) into one entry.
-  const coalesceKey = useRef<string | null>(null);
-
-  // Fresh-state mirrors so the global key handler (stable deps) reads current state.
-  const tracksRef = useRef(tracks);
-  tracksRef.current = tracks;
-  const cuesRef = useRef(cuesBySubId);
-  cuesRef.current = cuesBySubId;
-
-  const pushUndo = useCallback(() => {
-    undoStack.current.push({ kind: 'tracks', tracks: cloneTracks(tracksRef.current) });
-    if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.shift();
-    redoStack.current = [];
-    coalesceKey.current = null;
-  }, []);
-
-  // Snapshot the active sub's cues *before* a mutation. Pass a `key` to coalesce
-  // consecutive identical edits; pass null for discrete one-shot operations.
-  const snapshotCues = useCallback((subId: string, key: string | null) => {
-    if (key && coalesceKey.current === key) return;
-    const current = cuesRef.current[subId];
-    if (!current) return;
-    undoStack.current.push({ kind: 'cues', subId, cues: current });
-    if (undoStack.current.length > HISTORY_LIMIT) undoStack.current.shift();
-    redoStack.current = [];
-    coalesceKey.current = key;
-  }, []);
-
-  const restoreEntry = useCallback((entry: HistoryEntry): HistoryEntry | null => {
-    if (entry.kind === 'tracks') {
-      const inverse: HistoryEntry = { kind: 'tracks', tracks: cloneTracks(tracksRef.current) };
-      setTracks(entry.tracks);
-      return inverse;
-    }
-    const current = cuesRef.current[entry.subId];
-    const inverse: HistoryEntry | null = current
-      ? { kind: 'cues', subId: entry.subId, cues: current }
-      : null;
-    setActiveSubId(entry.subId);
-    setCuesBySubId((m) => ({ ...m, [entry.subId]: entry.cues }));
-    setExtSubs((subs) =>
-      subs.map((s) => (s.id === entry.subId ? { ...s, cues: entry.cues.length } : s)),
-    );
-    return inverse;
-  }, []);
-
-  const undo = useCallback(() => {
-    const entry = undoStack.current.pop();
-    if (!entry) return;
-    const inverse = restoreEntry(entry);
-    if (inverse) redoStack.current.push(inverse);
-    coalesceKey.current = null;
-  }, [restoreEntry]);
-
-  const redo = useCallback(() => {
-    const entry = redoStack.current.pop();
-    if (!entry) return;
-    const inverse = restoreEntry(entry);
-    if (inverse) undoStack.current.push(inverse);
-    coalesceKey.current = null;
-  }, [restoreEntry]);
+  const { pushUndo, snapshotCues } = useUndoRedo({
+    tracks,
+    cuesBySubId,
+    setTracks,
+    setActiveSubId,
+    setCuesBySubId,
+    setExtSubs,
+  });
 
   // ── bootstrap ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -298,226 +236,26 @@ function AppContent({
     };
   }, [file?.path, file?.durationSec, previewAudioId]);
 
-  const updateCue = useCallback(
-    (idx: number, patch: Partial<SrtCue>) => {
-      if (!activeSubId) return;
-      snapshotCues(activeSubId, `upd:${activeSubId}:${idx}`);
-      setCuesBySubId((m) => {
-        const list = m[activeSubId];
-        if (!list || !list[idx]) return m;
-        const next = list.slice();
-        next[idx] = { ...next[idx], ...patch };
-        return { ...m, [activeSubId]: next };
-      });
-      setEditedSubIds((s) => {
-        if (s.has(activeSubId)) return s;
-        const n = new Set(s);
-        n.add(activeSubId);
-        return n;
-      });
-    },
-    [activeSubId, snapshotCues]
-  );
-
-  const deleteCue = useCallback(
-    (idx: number) => {
-      if (!activeSubId) return;
-      snapshotCues(activeSubId, null);
-      setCuesBySubId((m) => {
-        const list = m[activeSubId];
-        if (!list || !list[idx]) return m;
-        const next = list.slice();
-        next.splice(idx, 1);
-        return { ...m, [activeSubId]: next };
-      });
-      setEditedSubIds((s) => {
-        if (s.has(activeSubId)) return s;
-        const n = new Set(s);
-        n.add(activeSubId);
-        return n;
-      });
-      setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: Math.max(0, s.cues - 1) } : s))
-      );
-    },
-    [activeSubId, snapshotCues]
-  );
-
-  const insertCue = useCallback(
-    (atTime: number): number => {
-      if (!activeSubId) return -1;
-      snapshotCues(activeSubId, null);
-      const list = cuesBySubId[activeSubId] || [];
-      const start = Math.max(0, atTime);
-      const end = start + 2;
-      const newCue = { idx: list.length + 1, start, end, text: '' };
-      const next = list.slice();
-      let pos = next.findIndex((c) => c.start > start);
-      if (pos < 0) pos = next.length;
-      next.splice(pos, 0, newCue);
-      setCuesBySubId((m) => ({ ...m, [activeSubId]: next }));
-      setEditedSubIds((s) => {
-        if (s.has(activeSubId)) return s;
-        const n = new Set(s);
-        n.add(activeSubId);
-        return n;
-      });
-      setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: s.cues + 1 } : s))
-      );
-      return pos;
-    },
-    [activeSubId, cuesBySubId, snapshotCues]
-  );
-
-  const markSubEdited = useCallback(() => {
-    if (!activeSubId) return;
-    setEditedSubIds((s) => {
-      if (s.has(activeSubId)) return s;
-      const n = new Set(s);
-      n.add(activeSubId);
-      return n;
-    });
-  }, [activeSubId]);
-
-  const shiftCues = useCallback(
-    (deltaSec: number, indices: number[]): void => {
-      if (!activeSubId || indices.length === 0) return;
-      snapshotCues(activeSubId, `shift:${activeSubId}:${indices.join(',')}`);
-      setCuesBySubId((m) => {
-        const list = m[activeSubId];
-        if (!list) return m;
-        const next = list.slice();
-        for (const i of indices) {
-          if (i < 0 || i >= next.length) continue;
-          const c = next[i];
-          next[i] = {
-            ...c,
-            start: Math.max(0, c.start + deltaSec),
-            end: Math.max(0, c.end + deltaSec),
-          };
-        }
-        return { ...m, [activeSubId]: next };
-      });
-      markSubEdited();
-    },
-    [activeSubId, markSubEdited, snapshotCues]
-  );
-
-  const shiftAllCues = useCallback(
-    (deltaSec: number, fromIdx: number): void => {
-      if (!activeSubId) return;
-      snapshotCues(activeSubId, `shiftAll:${activeSubId}:${fromIdx}`);
-      setCuesBySubId((m) => {
-        const list = m[activeSubId];
-        if (!list) return m;
-        const next = list.slice();
-        for (let i = fromIdx; i < next.length; i++) {
-          next[i] = {
-            ...next[i],
-            start: Math.max(0, next[i].start + deltaSec),
-            end: Math.max(0, next[i].end + deltaSec),
-          };
-        }
-        return { ...m, [activeSubId]: next };
-      });
-      markSubEdited();
-    },
-    [activeSubId, markSubEdited, snapshotCues]
-  );
-
-  const setCuesForActiveSub = useCallback(
-    (next: SrtCue[]): void => {
-      if (!activeSubId) return;
-      snapshotCues(activeSubId, null);
-      setCuesBySubId((m) => ({ ...m, [activeSubId]: next }));
-      setExtSubs((subs) =>
-        subs.map((s) => (s.id === activeSubId ? { ...s, cues: next.length } : s))
-      );
-      markSubEdited();
-    },
-    [activeSubId, markSubEdited, snapshotCues]
-  );
-
-  const splitCue = useCallback(
-    (idx: number, mode: 'playhead' | 'newline'): void => {
-      if (!activeSubId) return;
-      const list = cuesBySubId[activeSubId];
-      const cue = list?.[idx];
-      if (!cue) return;
-      const sub = extSubs.find((s) => s.id === activeSubId);
-      const syncOpts = { offset: sub?.offset ?? 0, speed: sub?.speed ?? 1 };
-
-      let splitT: number;
-      let textA: string;
-      let textB: string;
-
-      if (mode === 'newline') {
-        const nl = cue.text.indexOf('\n');
-        if (nl < 0) return;
-        textA = cue.text.slice(0, nl).trim();
-        textB = cue.text.slice(nl + 1).trim();
-        if (!textA || !textB) return;
-        const total = Math.max(1, visibleLen(cue.text));
-        const ratio = visibleLen(textA) / total;
-        splitT = cue.start + (cue.end - cue.start) * ratio;
-      } else {
-        splitT = fileTimeFromMediaTime(previewT, syncOpts);
-        if (splitT <= cue.start + 0.05 || splitT >= cue.end - 0.05) return;
-        textA = cue.text;
-        textB = '';
-      }
-
-      const next = list.slice();
-      next[idx] = { ...cue, end: splitT, text: textA };
-      next.splice(idx + 1, 0, {
-        idx: cue.idx + 1,
-        start: splitT,
-        end: cue.end,
-        text: textB,
-      });
-      setCuesForActiveSub(next);
-    },
-    [activeSubId, cuesBySubId, extSubs, previewT, setCuesForActiveSub]
-  );
-
-  const mergeCue = useCallback(
-    (idx: number): void => {
-      if (!activeSubId) return;
-      const list = cuesBySubId[activeSubId];
-      const a = list?.[idx];
-      const b = list?.[idx + 1];
-      if (!a || !b) return;
-      const text = a.text ? (b.text ? `${a.text}\n${b.text}` : a.text) : b.text;
-      const next = list.slice();
-      next[idx] = { ...a, end: b.end, text };
-      next.splice(idx + 1, 1);
-      setCuesForActiveSub(next);
-    },
-    [activeSubId, cuesBySubId, setCuesForActiveSub]
-  );
-
-  const duplicateCue = useCallback(
-    (idx: number, offsetSec = 2): void => {
-      if (!activeSubId) return;
-      const list = cuesBySubId[activeSubId];
-      const cue = list?.[idx];
-      if (!cue) return;
-      const dur = Math.max(0.05, cue.end - cue.start);
-      const gap = 0.05;
-      const copy: SrtCue = {
-        ...cue,
-        idx: cue.idx + 1,
-        start: cue.end + gap + offsetSec,
-        end: cue.end + gap + offsetSec + dur,
-        text: cue.text,
-      };
-      const next = list.slice();
-      next.splice(idx + 1, 0, copy);
-      setCuesForActiveSub(next);
-    },
-    [activeSubId, cuesBySubId, setCuesForActiveSub]
-  );
+  const {
+    updateCue,
+    deleteCue,
+    insertCue,
+    shiftCues,
+    shiftAllCues,
+    setCuesForActiveSub,
+    splitCue,
+    mergeCue,
+    duplicateCue,
+  } = useCueEditing({
+    activeSubId,
+    cuesBySubId,
+    extSubs,
+    previewT,
+    snapshotCues,
+    setCuesBySubId,
+    setExtSubs,
+    setEditedSubIds,
+  });
 
   const warnThresholds: CueWarningThresholds = useMemo(
     () => ({
@@ -583,23 +321,6 @@ function AppContent({
     },
     [activeSubId, extSubs, setPreviewTime]
   );
-
-  // Ctrl+Z undo, Ctrl+Y / Ctrl+Shift+Z redo (tracks + cue edits).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      const k = e.key.toLowerCase();
-      if (k === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if (k === 'y' || (k === 'z' && e.shiftKey)) {
-        e.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [undo, redo]);
 
   const refreshHistory = async () => {
     const h = await window.api.history.list();
