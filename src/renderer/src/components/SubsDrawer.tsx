@@ -16,6 +16,9 @@ interface Props {
   onUpdateSub: (id: string, patch: Partial<ExternalSub>) => void;
   onExportSrt?: (sub: ExternalSub) => void;
   onVisualSync?: () => void;
+  onAutoSync?: () => void;
+  /** Auto-sync needs an extracted audio waveform; disabled until available. */
+  autoSyncReady?: boolean;
   onDropFiles?: (paths: string[]) => void;
 }
 
@@ -29,6 +32,8 @@ export function SubsDrawer({
   onUpdateSub,
   onExportSrt,
   onVisualSync,
+  onAutoSync,
+  autoSyncReady,
   onDropFiles,
 }: Props) {
   const { t } = useT();
@@ -157,6 +162,18 @@ export function SubsDrawer({
           >
             {t('visual_sync_btn')}
           </button>
+
+          {onAutoSync && (
+            <button
+              className="btn compact full-width"
+              type="button"
+              onClick={onAutoSync}
+              disabled={!autoSyncReady}
+              title={autoSyncReady ? undefined : t('auto_sync_hint')}
+            >
+              {t('auto_sync_btn')}
+            </button>
+          )}
 
           <button
             className="btn ghost compact full-width manual-toggle"

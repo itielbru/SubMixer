@@ -3,12 +3,14 @@ import * as path from 'path';
 import { app } from 'electron';
 import log from './logger';
 import { clearTempSrt } from './srt';
+import {
+  PREVIEW_CACHE_MAX_BYTES as PREVIEW_CACHE_MAX,
+  PEAKS_CACHE_MAX_BYTES as PEAKS_CACHE_MAX,
+  PEAKS_CACHE_TTL_MS as PEAKS_TTL_MS,
+} from '@shared/config';
 
 // Caches are reusable across sessions, so we evict by age only when over budget
 // instead of wiping them on every launch.
-const PREVIEW_CACHE_MAX = 500 * 1024 * 1024; // 500 MB (extracted audio previews)
-const PEAKS_CACHE_MAX = 200 * 1024 * 1024; // 200 MB (waveform peaks)
-const PEAKS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /** Delete cache files older than `maxAgeMs` (by whichever of mtime/atime is more recent). */
 export async function evictByAge(dir: string, maxAgeMs: number): Promise<void> {

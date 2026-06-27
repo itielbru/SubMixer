@@ -13,6 +13,7 @@ import type {
   VideoEncoder,
 } from '@shared/types';
 import { DEFAULT_VIDEO_ENCODE, HARDWARE_ENCODERS, videoEncodeArgs } from '@shared/video-encode';
+import { PREVIEW_EXTRACT_TIMEOUT_MS, PEAKS_EXTRACT_TIMEOUT_MS } from '@shared/config';
 
 const execFileAsync = promisify(execFile);
 
@@ -399,7 +400,7 @@ export async function extractAudioPreview(
     const timer = setTimeout(() => {
       try { child.kill('SIGINT'); } catch { /* */ }
       rejectP(new Error('FFmpeg preview timed out after 3 minutes'));
-    }, 180_000);
+    }, PREVIEW_EXTRACT_TIMEOUT_MS);
 
     child.stderr.on('data', (chunk: Buffer) => {
       const text = chunk.toString();
@@ -478,7 +479,7 @@ export async function extractPeaks(
     const timer = setTimeout(() => {
       try { child.kill('SIGINT'); } catch { /* */ }
       rejectP(new Error('FFmpeg peaks extraction timed out after 2 minutes'));
-    }, 120_000);
+    }, PEAKS_EXTRACT_TIMEOUT_MS);
 
     const ensureCapacity = (need: number): void => {
       if (need <= min.length) return;

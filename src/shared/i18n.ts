@@ -157,6 +157,10 @@ export const translations = {
     sub_forced_tip: 'כתוביות שמוצגות תמיד לרוב לתרגום קטעים בשפה זרה.',
     save_synced_srt: 'שמור כתוביות מסונכרנות',
     visual_sync_btn: 'סנכרון ויזואלי',
+    auto_sync_btn: 'סנכרון אוטומטי (לפי אודיו)',
+    auto_sync_hint: 'דורש גל אודיו — בחר מסלול אודיו והמתן לחילוץ הגל.',
+    auto_sync_applied: 'סונכרן אוטומטית · היסט',
+    auto_sync_failed: 'לא הצלחתי לקבוע היסט אמין — נסה סנכרון ויזואלי.',
     visual_sync_title: 'סנכרון ויזואלי',
     visual_sync_hint:
       'התאם שורת התחלה ושורת סיום לזמני הווידאו, ואז החל offset ומהירות.',
@@ -502,6 +506,10 @@ export const translations = {
     sub_forced_tip: 'Subtitles displayed permanently, usually to translate foreign dialogue.',
     save_synced_srt: 'Save Synced Subtitles',
     visual_sync_btn: 'Visual Sync',
+    auto_sync_btn: 'Auto-sync (from audio)',
+    auto_sync_hint: 'Needs an audio waveform — select an audio track and wait for extraction.',
+    auto_sync_applied: 'Auto-synced · offset',
+    auto_sync_failed: 'Could not determine a reliable offset — try Visual Sync.',
     visual_sync_title: 'Visual Sync',
     visual_sync_hint:
       'Match a start cue and end cue to video times, then apply offset and speed.',

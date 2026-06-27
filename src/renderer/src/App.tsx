@@ -8,8 +8,9 @@ import type {
   SrtCue,
   Track,
 } from '@shared/types';
-import { fileTimeFromMediaTime, mediaTimeForCueStart } from '@shared/cue-sync';
+import { fileTimeFromMediaTime, mediaTimeForCueStart, transformCues } from '@shared/cue-sync';
 import { buildExportPlan } from '@shared/export-plan';
+import { estimateSubtitleOffset } from '@shared/auto-sync';
 import { TopBar } from './components/TopBar';
 import { SourcePanel } from './components/SourcePanel';
 import { ContentDetails } from './components/ContentDetails';
@@ -544,6 +545,34 @@ function AppContent({
     }),
     [settings.subFontScale, settings.subColor, settings.subStyle, settings.subPosition]
   );
+
+  const autoSyncActiveSub = useCallback((): void => {
+    const sub = extSubs.find((s) => s.id === activeSubId);
+    if (!sub || !peaks) {
+      toast(t('auto_sync_hint'), 'warn');
+      return;
+    }
+    const list = activeSubId ? cuesBySubId[activeSubId] ?? [] : [];
+    if (list.length === 0) {
+      toast(t('no_srt_loaded'), 'warn');
+      return;
+    }
+    // Transform by current speed only; the estimate then equals the offset to set.
+    const transformed = transformCues(list, { offset: 0, speed: sub.speed });
+    const result = estimateSubtitleOffset(transformed, {
+      min: peaks.min,
+      max: peaks.max,
+      peaksPerSec: peaks.peaksPerSec,
+      duration: peaks.duration,
+    });
+    if (!result || result.score < 0.25) {
+      toast(t('auto_sync_failed'), 'warn');
+      return;
+    }
+    const offset = Math.round(result.offsetSec * 100) / 100;
+    setExtSubs((subs) => subs.map((s) => (s.id === sub.id ? { ...s, offset } : s)));
+    toast(`${t('auto_sync_applied')}: ${offset >= 0 ? '+' : ''}${offset.toFixed(2)}s`, 'ok');
+  }, [activeSubId, extSubs, peaks, cuesBySubId, t, toast]);
 
   const seekToFileCue = useCallback(
     (fileT: number): void => {
@@ -1255,6 +1284,8 @@ function AppContent({
                 setShowVisualSync(true);
               } else toast(t('no_srt_loaded'), 'warn');
             }}
+            onAutoSync={autoSyncActiveSub}
+            autoSyncReady={!!peaks && cues.length > 0}
           />
         )}
       </div>
