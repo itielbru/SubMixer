@@ -22,6 +22,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  videoEncoder: 'libx264',
+  videoPreset: 'fast',
+  videoQuality: 20,
 };
 
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');

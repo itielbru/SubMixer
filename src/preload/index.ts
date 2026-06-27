@@ -8,6 +8,7 @@ import type {
   ExportRecord,
   FFmpegStatus,
   SrtCue,
+  VideoEncoder,
 } from '../shared/types';
 import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from '../shared/preview';
 
@@ -16,6 +17,8 @@ const api = {
     status: (force = false): Promise<FFmpegStatus> =>
       ipcRenderer.invoke('ffmpeg:status', force),
     openInstallPage: (): Promise<void> => ipcRenderer.invoke('ffmpeg:openInstallPage'),
+    listEncoders: (force = false): Promise<VideoEncoder[]> =>
+      ipcRenderer.invoke('ffmpeg:listEncoders', force),
   },
 
   media: {

@@ -1,10 +1,20 @@
-import React from 'react';
-import type { AppSettings } from '@shared/types';
+import React, { useEffect, useState } from 'react';
+import type { AppSettings, VideoEncoder } from '@shared/types';
 import { Ico, I } from '../ui/Icons';
 import { ACCENTS } from '../../lib/theme';
 import { Dropdown } from '../ui/Dropdown';
 import { useT } from '../../hooks/useTranslation';
 import { Modal } from '../ui/Modal';
+
+const ENCODER_LABEL: Record<VideoEncoder, string> = {
+  libx264: 'H.264 (x264, software)',
+  libx265: 'H.265 (x265, software)',
+  h264_nvenc: 'H.264 (NVIDIA NVENC)',
+  hevc_nvenc: 'H.265 (NVIDIA NVENC)',
+  h264_qsv: 'H.264 (Intel QuickSync)',
+  h264_amf: 'H.264 (AMD AMF)',
+  h264_videotoolbox: 'H.264 (Apple VideoToolbox)',
+};
 
 interface Props {
   settings: AppSettings;
@@ -15,6 +25,13 @@ interface Props {
 
 export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: Props) {
   const { t } = useT();
+  const [encoders, setEncoders] = useState<VideoEncoder[]>(['libx264']);
+
+  useEffect(() => {
+    void window.api.ffmpeg.listEncoders().then((list) => {
+      if (list.length > 0) setEncoders(list);
+    });
+  }, []);
 
   return (
     <Modal onClose={onClose} label={t('settings_title')}>
@@ -229,6 +246,45 @@ export function SettingsModal({ settings, onClose, onChange, onChooseFolder }: P
             <div className="small" style={{ opacity: 0.75, gridColumn: '1 / -1', marginTop: -8 }}>
               {t('burn_in_hint')}
             </div>
+
+            {settings.burnInSubs && (
+              <>
+                <label>{t('settings_video_encoder')}</label>
+                <Dropdown
+                  value={settings.videoEncoder}
+                  onChange={(v) => onChange('videoEncoder', v as VideoEncoder)}
+                  options={encoders.map((e) => ({ value: e, label: ENCODER_LABEL[e] }))}
+                />
+
+                <label>{t('settings_video_preset')}</label>
+                <Dropdown
+                  value={settings.videoPreset}
+                  onChange={(v) => onChange('videoPreset', v as AppSettings['videoPreset'])}
+                  options={[
+                    { value: 'fast', label: t('preset_fast') },
+                    { value: 'medium', label: t('preset_medium') },
+                    { value: 'slow', label: t('preset_slow') },
+                  ]}
+                />
+
+                <label>{t('settings_video_quality')}</label>
+                <input
+                  type="number"
+                  min={14}
+                  max={32}
+                  value={settings.videoQuality}
+                  onChange={(e) =>
+                    onChange('videoQuality', Math.min(51, Math.max(0, Number(e.target.value) || 20)))
+                  }
+                />
+                <div
+                  className="small"
+                  style={{ opacity: 0.75, gridColumn: '1 / -1', marginTop: -8 }}
+                >
+                  {t('settings_video_quality_hint')}
+                </div>
+              </>
+            )}
 
             {import.meta.env.DEV && (
               <>

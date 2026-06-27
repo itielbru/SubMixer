@@ -10,7 +10,9 @@ import type {
   FFmpegStatus,
   ExportPlan,
   ExportProgress,
+  VideoEncoder,
 } from '@shared/types';
+import { DEFAULT_VIDEO_ENCODE, HARDWARE_ENCODERS, videoEncodeArgs } from '@shared/video-encode';
 
 const execFileAsync = promisify(execFile);
 
@@ -86,6 +88,30 @@ export async function findBinaries(force = false): Promise<FFmpegStatus> {
     version,
   };
   return cachedStatus;
+}
+
+let cachedEncoders: VideoEncoder[] | null = null;
+
+/**
+ * Probe `ffmpeg -encoders` and return the video encoders we support that are
+ * actually compiled in. libx264 is always reported first when present so the UI
+ * has a software default; hardware encoders depend on the user's GPU/drivers.
+ */
+export async function listAvailableEncoders(force = false): Promise<VideoEncoder[]> {
+  if (cachedEncoders && !force) return cachedEncoders;
+  const status = await findBinaries();
+  if (!status.ffmpegPath) return [];
+  const known: VideoEncoder[] = ['libx264', 'libx265', ...HARDWARE_ENCODERS];
+  try {
+    const { stdout } = await execFileAsync(status.ffmpegPath, ['-hide_banner', '-encoders'], {
+      windowsHide: true,
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    cachedEncoders = known.filter((enc) => new RegExp(`\\b${enc}\\b`).test(stdout));
+  } catch {
+    cachedEncoders = ['libx264'];
+  }
+  return cachedEncoders;
 }
 
 function ensure(status: FFmpegStatus): asserts status is FFmpegStatus & {
@@ -650,7 +676,7 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
     if (burning) {
       const esc = escapeSubtitlesFilterPath(processedSubPaths[burnIdx]);
       args.push('-vf', `subtitles='${esc}':force_style='Outline=2,Shadow=0'`);
-      args.push('-c:v', 'libx264', '-preset', 'faster', '-crf', '20', '-pix_fmt', 'yuv420p');
+      args.push(...videoEncodeArgs(plan.videoEncode ?? DEFAULT_VIDEO_ENCODE));
     } else {
       args.push('-c:v', 'copy');
     }

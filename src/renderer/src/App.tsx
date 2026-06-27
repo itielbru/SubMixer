@@ -826,8 +826,25 @@ function AppContent({
         container,
         burnInSubs: settings.burnInSubs,
         activeSubId,
+        videoEncode: {
+          encoder: settings.videoEncoder,
+          preset: settings.videoPreset,
+          quality: settings.videoQuality,
+        },
       }),
-    [file, tracks, extSubs, outPath, outName, container, settings.burnInSubs, activeSubId]
+    [
+      file,
+      tracks,
+      extSubs,
+      outPath,
+      outName,
+      container,
+      settings.burnInSubs,
+      activeSubId,
+      settings.videoEncoder,
+      settings.videoPreset,
+      settings.videoQuality,
+    ]
   );
 
   const openCmdModal = async () => {

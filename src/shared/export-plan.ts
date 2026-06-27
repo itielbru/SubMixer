@@ -5,7 +5,7 @@
 // raw pieces of state in; this module decides video/audio/embedded/external
 // track membership, the burn-in target, and the output container.
 
-import type { ExportPlan, ExternalSub, MediaFile, Track } from './types';
+import type { ExportPlan, ExternalSub, MediaFile, Track, VideoEncodeOptions } from './types';
 
 export interface BuildPlanInput {
   file: MediaFile | null;
@@ -21,6 +21,8 @@ export interface BuildPlanInput {
   burnInSubs: boolean;
   /** Id of the currently active external subtitle, or null. */
   activeSubId: string | null;
+  /** Video encode options applied only when a burn-in re-encode happens. */
+  videoEncode?: VideoEncodeOptions;
 }
 
 /**
@@ -35,7 +37,8 @@ export interface BuildPlanInput {
  * - Container is `mp4` only when explicitly chosen, otherwise `mkv`.
  */
 export function buildExportPlan(input: BuildPlanInput): ExportPlan | null {
-  const { file, tracks, extSubs, outPath, outName, container, burnInSubs, activeSubId } = input;
+  const { file, tracks, extSubs, outPath, outName, container, burnInSubs, activeSubId, videoEncode } =
+    input;
   if (!file) return null;
 
   const v = tracks.find((t) => t.kind === 'V' && t.keep) || tracks.find((t) => t.kind === 'V');
@@ -73,5 +76,7 @@ export function buildExportPlan(input: BuildPlanInput): ExportPlan | null {
     metadataTitle: outName.replace(/\.[^.]+$/, ''),
     container: container.toLowerCase() === 'mp4' ? 'mp4' : 'mkv',
     burnInSubIndex,
+    // Only attach encode options when we'll actually burn in (and thus re-encode).
+    videoEncode: burnInSubIndex !== null ? videoEncode : undefined,
   };
 }
