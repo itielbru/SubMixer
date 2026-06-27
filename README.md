@@ -15,7 +15,7 @@
 ## דרישות
 
 - [Node.js](https://nodejs.org/) LTS
-- **Windows** (יעד הבנייה)
+- **Windows / macOS / Linux** — ראו [`docs/RELEASING.md`](docs/RELEASING.md) לבנייה לכל פלטפורמה
 - **FFmpeg** — מוטמע באפליקציה (מומלץ) או זמין ב-**PATH**
 
 ## התקנה
@@ -27,7 +27,11 @@ npm run setup:ffmpeg   # מוריד ffmpeg.exe + ffprobe.exe ל-ffmpeg-bin/
 npm run dev
 ```
 
-`setup:ffmpeg` אופציונלי אם FFmpeg כבר מותקן ב-PATH.
+`setup:ffmpeg` מזהה את מערכת ההפעלה ומוריד את ה-build המתאים (Windows/macOS/Linux);
+אופציונלי אם FFmpeg כבר מותקן ב-PATH.
+
+לבנייה ל-macOS/Linux: `npm run build:mac` / `npm run build:linux` — פרטים ב-[`docs/RELEASING.md`](docs/RELEASING.md).
+ל-roadmap המלא ראו [`ROADMAP.md`](ROADMAP.md).
 
 ## בנייה ל-Windows
 

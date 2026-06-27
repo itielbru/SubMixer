@@ -6,6 +6,26 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Hardware-accelerated burn-in encoding**: when burning subtitles into the
+  video, the encoder (x264/x265, NVIDIA NVENC, Intel QuickSync, AMD AMF, Apple
+  VideoToolbox), speed/quality preset, and CRF/CQ quality are now selectable in
+  Settings. Hardware encoders are offered only when `ffmpeg -encoders` reports
+  them. Software x264 remains the default.
+- **Cross-platform packaging**: `setup:ffmpeg` downloads the correct ffmpeg /
+  ffprobe build per OS; electron-builder gains macOS (DMG + zip) and Linux
+  (AppImage + deb) targets with `build:mac` / `build:linux` scripts.
+- **`ROADMAP.md`** and **`docs/RELEASING.md`** documenting direction and the
+  signed cross-platform release process.
+
+### Improved
+
+- **Dependency hygiene**: Dependabot (npm + GitHub Actions, grouped minor/patch)
+  and a non-blocking dependency-audit job in CI.
+- **Testability**: `ExportPlan` assembly extracted to a pure, unit-tested
+  `src/shared/export-plan.ts`; coverage thresholds now enforced in CI.
+
 ## [1.1.1] - 2026-06-15
 
 ### Added
