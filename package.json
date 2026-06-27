@@ -21,6 +21,8 @@
     "build:newdir": "electron-vite build && electron-builder --win nsis --config.directories.output=release-new",
     "build:portable": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win portable",
     "build:dir": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win --dir",
+    "build:mac": "node scripts/clean-release.cjs && electron-vite build && electron-builder --mac",
+    "build:linux": "node scripts/clean-release.cjs && electron-vite build && electron-builder --linux",
     "release": "node scripts/clean-release.cjs && electron-vite build && electron-builder --win nsis portable --publish always",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
