@@ -9,6 +9,7 @@ import type {
   Track,
 } from '@shared/types';
 import { fileTimeFromMediaTime, mediaTimeForCueStart } from '@shared/cue-sync';
+import { buildExportPlan } from '@shared/export-plan';
 import { TopBar } from './components/TopBar';
 import { SourcePanel } from './components/SourcePanel';
 import { ContentDetails } from './components/ContentDetails';
@@ -814,53 +815,20 @@ function AppContent({
 
   const activeSub = extSubs.find((s) => s.id === activeSubId);
 
-  const buildPlan = useCallback((): ExportPlan | null => {
-    if (!file) return null;
-    const v = tracks.find((t) => t.kind === 'V' && t.keep) || tracks.find((t) => t.kind === 'V');
-    const videoTrackId = v?.id ?? null;
-    const audioTracks = tracks
-      .filter((t) => t.kind === 'A' && t.keep)
-      .map((t) => ({
-        id: t.id,
-        lang: t.lang,
-        def: t.def,
-        forced: t.forced,
-        codecName: t.codecName,
-      }));
-    const embeddedSubs = tracks
-      .filter((t) => t.kind === 'S' && t.keep)
-      .map((t) => ({
-        id: t.id,
-        lang: t.lang,
-        def: t.def,
-        forced: t.forced,
-        codecName: t.codecName,
-      }));
-    const extMeta = extSubs.map((s) => ({
-      path: s.path,
-      lang: s.lang,
-      def: s.def,
-      forced: s.forced,
-      offset: s.offset,
-      speed: s.speed,
-      trackName: s.trackName,
-      encoding: s.encoding,
-    }));
-    const activeExtIdx = extSubs.findIndex((s) => s.id === activeSubId);
-    const burnInSubIndex =
-      settings.burnInSubs && activeExtIdx >= 0 ? activeExtIdx : null;
-    return {
-      inputFile: file.path,
-      externalSubs: extMeta,
-      videoTrackId,
-      audioTracks,
-      embeddedSubs,
-      outputPath: outPath,
-      metadataTitle: outName.replace(/\.[^.]+$/, ''),
-      container: container.toLowerCase() === 'mp4' ? 'mp4' : 'mkv',
-      burnInSubIndex,
-    };
-  }, [file, tracks, extSubs, outPath, outName, container, settings.burnInSubs, activeSubId]);
+  const buildPlan = useCallback(
+    (): ExportPlan | null =>
+      buildExportPlan({
+        file,
+        tracks,
+        extSubs,
+        outPath,
+        outName,
+        container,
+        burnInSubs: settings.burnInSubs,
+        activeSubId,
+      }),
+    [file, tracks, extSubs, outPath, outName, container, settings.burnInSubs, activeSubId]
+  );
 
   const openCmdModal = async () => {
     const plan = buildPlan();
