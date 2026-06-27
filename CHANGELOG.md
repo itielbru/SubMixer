@@ -13,6 +13,9 @@ All notable changes to SubMixer are documented here. This project adheres to
   VideoToolbox), speed/quality preset, and CRF/CQ quality are now selectable in
   Settings. Hardware encoders are offered only when `ffmpeg -encoders` reports
   them. Software x264 remains the default.
+- **Audio-based auto-sync**: a one-click "Auto-sync" estimates a global subtitle
+  offset by correlating subtitle timing against the audio energy envelope
+  (available once a waveform has been extracted).
 - **Cross-platform packaging**: `setup:ffmpeg` downloads the correct ffmpeg /
   ffprobe build per OS; electron-builder gains macOS (DMG + zip) and Linux
   (AppImage + deb) targets with `build:mac` / `build:linux` scripts.
@@ -25,6 +28,9 @@ All notable changes to SubMixer are documented here. This project adheres to
   and a non-blocking dependency-audit job in CI.
 - **Testability**: `ExportPlan` assembly extracted to a pure, unit-tested
   `src/shared/export-plan.ts`; coverage thresholds now enforced in CI.
+- **Renderer structure**: undo/redo and cue-editing logic moved out of the
+  `App.tsx` god-component into `useUndoRedo` / `useCueEditing` hooks
+  (1427 → 1164 lines); operational constants centralized in `src/shared/config.ts`.
 
 ## [1.1.1] - 2026-06-15
 

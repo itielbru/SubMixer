@@ -15,9 +15,9 @@
 
 | # | פריט | סטטוס |
 | - | ---- | ----- |
-| 1.1 | פירוק `App.tsx` ל-hooks ייעודיים (god-component של ~1400 שורות) | 🟡 התחיל — `buildPlan` חולץ ל-`src/shared/export-plan.ts` |
-| 1.2 | כיסוי טסטים ללוגיקת הייצוא + אכיפת coverage thresholds | ✅ `export-plan`, `video-encode`, `path` נבדקים; thresholds ב-`vitest.config.ts` |
-| 1.3 | איחוד צורת תגובות IPC ל-union type + ריכוז constants קשיחים | ⬜ |
+| 1.1 | פירוק `App.tsx` ל-hooks ייעודיים (god-component של ~1400 שורות) | 🟡 רוב הפירוק בוצע — `export-plan`, `useUndoRedo`, `useCueEditing` (1427→1164 שורות) |
+| 1.2 | כיסוי טסטים ללוגיקת הייצוא + אכיפת coverage thresholds | ✅ `export-plan`, `video-encode`, `auto-sync`, `path` נבדקים; thresholds ב-`vitest.config.ts` |
+| 1.3 | ריכוז constants קשיחים ל-`src/shared/config.ts` (timeouts/cache) | ✅ · איחוד צורת תגובות IPC ל-union ⬜ |
 
 ## Wave 2 — הפצה ואמון
 
@@ -32,7 +32,7 @@
 | # | פריט | סטטוס |
 | - | ---- | ----- |
 | 3.1 | האצת חומרה (NVENC/QSV/AMF/VideoToolbox) + בקרת איכות ל-burn-in | ✅ |
-| 3.2 | סנכרון כתוביות אוטומטי לפי אנרגיית אודיו | ⬜ |
+| 3.2 | סנכרון כתוביות אוטומטי לפי אנרגיית אודיו | ✅ `src/shared/auto-sync.ts` + כפתור ב-SubsDrawer |
 | 3.3 | הורדת כתוביות (OpenSubtitles) + שימור styling של ASS | 🔑 דורש מפתח API |
 | 3.4 | מקשי קיצור הניתנים להתאמה, שפות i18n נוספות, גרירת תיקייה | ⬜ |
 
