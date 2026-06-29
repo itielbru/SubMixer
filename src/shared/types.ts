@@ -172,17 +172,33 @@ export interface FFmpegStatus {
   version: string | null;
 }
 
-export interface ProbeResult {
-  ok: boolean;
-  file?: MediaFile;
-  error?: string;
-}
+/**
+ * Discriminated result returned across the IPC boundary. On success `ok` is true
+ * and the payload `T` is present; on failure `ok` is false with an `error`
+ * message. Narrowing on `ok` removes the need to null-check each payload field.
+ */
+export type IpcResult<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
-export interface AddSubResult {
-  ok: boolean;
-  sub?: ExternalSub;
-  cues?: SrtCue[];
-  error?: string;
-}
+export type ProbeResult = IpcResult<{ file: MediaFile }>;
+
+export type AddSubResult = IpcResult<{ sub: ExternalSub; cues?: SrtCue[] }>;
+
+export type SrtReadResult = IpcResult<{ cues: SrtCue[]; encoding: string; size?: number }>;
+
+export type SrtSaveResult = IpcResult;
+
+export type SrtWriteResult = IpcResult<{ path: string }>;
+
+export type PeaksResult = IpcResult<{
+  fromCache?: boolean;
+  peaksPerSec: number;
+  durationSec: number;
+  min: Float32Array;
+  max: Float32Array;
+}>;
+
+export type ExportRunResult =
+  | { ok: true; code: number | null; cancelled: boolean }
+  | { ok: false; cancelled: boolean; code?: number | null; error: string };
 
 export type LogLevel = 'info' | 'ok' | 'warn' | 'err';

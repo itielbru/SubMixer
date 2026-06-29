@@ -330,7 +330,7 @@ function AppContent({
   const loadFile = async (pathStr: string) => {
     pushUndo();
     const r = await window.api.media.probe(pathStr);
-    if (!r.ok || !r.file) {
+    if (!r.ok) {
       toast(r.error || t('load_error'), 'err');
       return;
     }
@@ -372,13 +372,14 @@ function AppContent({
     let added = false;
     for (const p of paths) {
       const r = await window.api.srt.add(p);
-      if (r.ok && r.sub) {
-        setExtSubs((s) => [...s, r.sub!]);
-        setActiveSubId(r.sub!.id);
+      if (r.ok) {
+        const sub = r.sub;
+        setExtSubs((s) => [...s, sub]);
+        setActiveSubId(sub.id);
         if (r.cues) {
-          setCuesBySubId((m) => ({ ...m, [r.sub!.id]: r.cues! }));
+          setCuesBySubId((m) => ({ ...m, [sub.id]: r.cues! }));
         }
-        toast(`${t('subs_added')}: ${r.sub!.name}`, 'ok');
+        toast(`${t('subs_added')}: ${sub.name}`, 'ok');
         added = true;
       } else toast(r.error || t('error'), 'err');
     }

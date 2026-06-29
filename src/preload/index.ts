@@ -6,8 +6,13 @@ import type {
   ExportPlan,
   ExportProgress,
   ExportRecord,
+  ExportRunResult,
   FFmpegStatus,
+  PeaksResult,
   SrtCue,
+  SrtReadResult,
+  SrtSaveResult,
+  SrtWriteResult,
   VideoEncoder,
 } from '../shared/types';
 import type { PreviewExtractPhase, PreviewExtractResult, PreviewProgress } from '../shared/preview';
@@ -38,7 +43,7 @@ const api = {
 
   srt: {
     add: (filePath: string): Promise<AddSubResult> => ipcRenderer.invoke('srt:add', filePath),
-    read: (filePath: string): Promise<{ ok: boolean; cues?: SrtCue[]; encoding?: string; size?: number; error?: string }> =>
+    read: (filePath: string): Promise<SrtReadResult> =>
       ipcRenderer.invoke('srt:read', filePath),
     save: (args: {
       sourcePath: string;
@@ -46,12 +51,9 @@ const api = {
       offset: number;
       speed: number;
       encoding?: string;
-    }): Promise<{ ok: boolean; error?: string }> =>
+    }): Promise<SrtSaveResult> =>
       ipcRenderer.invoke('srt:save', args),
-    writeCues: (
-      cues: SrtCue[],
-      baseName: string
-    ): Promise<{ ok: boolean; path?: string; error?: string }> =>
+    writeCues: (cues: SrtCue[], baseName: string): Promise<SrtWriteResult> =>
       ipcRenderer.invoke('srt:writeCues', cues, baseName),
   },
 
@@ -75,15 +77,7 @@ const api = {
       filePath: string,
       trackIndex: number,
       durationSec: number
-    ): Promise<{
-      ok: boolean;
-      fromCache?: boolean;
-      peaksPerSec?: number;
-      durationSec?: number;
-      min?: Float32Array;
-      max?: Float32Array;
-      error?: string;
-    }> => ipcRenderer.invoke('peaks:get', { filePath, trackIndex, durationSec }),
+    ): Promise<PeaksResult> => ipcRenderer.invoke('peaks:get', { filePath, trackIndex, durationSec }),
     onProgress: (cb: (pct: number) => void): (() => void) => {
       const handler = (_e: IpcRendererEvent, pct: number) => cb(pct);
       ipcRenderer.on('peaks:progress', handler);
@@ -96,7 +90,7 @@ const api = {
       plan: ExportPlan,
       durationSec: number,
       externalSubs: { path: string; offset: number; speed: number; encoding?: string }[]
-    ): Promise<{ ok: boolean; code: number | null; cancelled: boolean; error?: string }> =>
+    ): Promise<ExportRunResult> =>
       ipcRenderer.invoke('export:run', plan, durationSec, externalSubs),
     cancel: (): Promise<boolean> => ipcRenderer.invoke('export:cancel'),
     cmdString: (plan: ExportPlan): Promise<string> =>
