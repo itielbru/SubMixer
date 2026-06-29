@@ -6,6 +6,8 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-29
+
 ### Added
 
 - **Hardware-accelerated burn-in encoding**: when burning subtitles into the
