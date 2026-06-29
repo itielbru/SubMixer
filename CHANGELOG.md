@@ -6,6 +6,12 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **IPC result types**: unified the per-channel `{ ok; payload?; error? }` shapes
+  into a generic discriminated `IpcResult<T>` union, so narrowing on `ok`
+  guarantees the payload (no per-field null checks). Type-only, no behaviour change.
+
 ## [1.2.0] - 2026-06-29
 
 ### Added
