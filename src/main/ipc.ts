@@ -21,6 +21,7 @@ import {
   cancelActiveExport,
   buildCommandString,
   validateExportPlan,
+  listAvailableEncoders,
 } from './ffmpeg';
 import { loadCached, saveCached } from './peaks-cache';
 import {
@@ -118,6 +119,10 @@ export function registerIpc(): void {
 
   ipcMain.handle('ffmpeg:openInstallPage', async () => {
     await shell.openExternal('https://www.gyan.dev/ffmpeg/builds/');
+  });
+
+  ipcMain.handle('ffmpeg:listEncoders', async (_e, force?: boolean) => {
+    return listAvailableEncoders(!!force);
   });
 
   // ── Probe video ──────────────────────────────────────────────────────────

@@ -82,6 +82,27 @@ export interface ExportPlan {
    *  instead of muxing it as a soft track. Requires re-encoding the video.
    *  null = normal soft-subtitle mux. */
   burnInSubIndex: number | null;
+  /** Video encode settings, used only when burnInSubIndex forces a re-encode.
+   *  Omitted = software x264 defaults (see DEFAULT_VIDEO_ENCODE). */
+  videoEncode?: VideoEncodeOptions;
+}
+
+export type VideoEncoder =
+  | 'libx264'
+  | 'libx265'
+  | 'h264_nvenc'
+  | 'hevc_nvenc'
+  | 'h264_qsv'
+  | 'h264_amf'
+  | 'h264_videotoolbox';
+
+export type EncodePreset = 'fast' | 'medium' | 'slow';
+
+export interface VideoEncodeOptions {
+  encoder: VideoEncoder;
+  preset: EncodePreset;
+  /** CRF/CQ-style quality (lower = better, ~18–28 useful range). */
+  quality: number;
 }
 
 export interface ExportProgress {
@@ -134,6 +155,12 @@ export interface AppSettings {
   subPosition: 'bottom' | 'top';
   /** Burn the active external subtitle into the video on export (re-encodes). */
   burnInSubs: boolean;
+  /** Video encoder used for burn-in re-encodes (see VideoEncoder). */
+  videoEncoder: VideoEncoder;
+  /** Encode speed/quality tradeoff preset. */
+  videoPreset: EncodePreset;
+  /** CRF/CQ-style quality (lower = better). */
+  videoQuality: number;
 }
 
 export type SubStyleMode = 'outline' | 'box' | 'none';

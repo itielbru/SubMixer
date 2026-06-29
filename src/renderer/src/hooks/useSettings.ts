@@ -21,6 +21,9 @@ const DEFAULT: AppSettings = {
   subStyle: 'outline',
   subPosition: 'bottom',
   burnInSubs: false,
+  videoEncoder: 'libx264',
+  videoPreset: 'fast',
+  videoQuality: 20,
 };
 
 export function useSettings(): [

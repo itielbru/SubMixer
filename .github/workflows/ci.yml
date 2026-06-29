@@ -42,6 +42,25 @@ jobs:
       - name: Build (bundle smoke)
         run: npx electron-vite build
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Visibility only: surfaces advisories without blocking the pipeline.
+      # Dependabot drives the actual upgrades (see .github/dependabot.yml).
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
+
   check-windows:
     name: Typecheck + test (Windows)
     runs-on: windows-latest

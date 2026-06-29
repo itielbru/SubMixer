@@ -23,6 +23,15 @@ export default defineConfig({
         'src/main/peaks-cache.ts',
       ],
       reporter: ['text', 'html'],
+      // Fail the suite (and CI) if coverage on the included core modules drops
+      // below these floors. Set a few points under the current numbers so the
+      // gate catches regressions without being brittle to small refactors.
+      thresholds: {
+        statements: 75,
+        branches: 72,
+        functions: 80,
+        lines: 75,
+      },
     },
   },
 });
