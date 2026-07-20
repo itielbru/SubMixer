@@ -221,7 +221,7 @@ function streamToTrack(stream: FFProbeStream, isFirstVideo: boolean): Track | nu
   const title = tags.title || tags.TITLE || '';
 
   let name = title;
-  let info = '';
+  let info: string;
   const codec = (stream.codec_name || '').toUpperCase();
   const codecLong = stream.codec_long_name || '';
 

@@ -46,6 +46,14 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // eslint-plugin-react-hooks v7 promotes these React-Compiler-era checks to
+      // errors in its recommended config. This repo treats hook lint as advisory
+      // (see exhaustive-deps below), so keep them as warnings to preserve the
+      // pre-v7 posture. The underlying findings are worth a dedicated cleanup pass.
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/immutability': 'warn',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },

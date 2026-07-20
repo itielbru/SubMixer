@@ -492,7 +492,6 @@ export function Timeline({
       let line: number | null = null;
       if (dStart <= dEnd && dStart <= snapTol) {
         newStart = sStart.value;
-        newEnd = newStart + cueSpan;
         line = newStart;
       } else if (dEnd < snapTol) {
         newEnd = sEnd.value;
