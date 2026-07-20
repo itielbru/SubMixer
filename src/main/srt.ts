@@ -36,7 +36,7 @@ export function parseSrt(text: string): SrtCue[] {
   for (const block of blocks) {
     const lines = block.split('\n').map((l) => l.replace(/\s+$/, ''));
     let cursor = 0;
-    let idx = 0;
+    let idx: number;
     if (/^\d+$/.test(lines[cursor]?.trim() ?? '')) {
       idx = Number(lines[cursor].trim());
       cursor++;
@@ -257,7 +257,7 @@ export async function readSrtFile(
   const { text, encoding: detected } = pickBestText(buf, preferredEncoding);
 
   const ext = path.extname(filePath).toLowerCase();
-  let cues: SrtCue[] = [];
+  let cues: SrtCue[];
   if (ext === '.vtt') {
     cues = parseVtt(text);
   } else if (ext === '.ass' || ext === '.ssa') {
