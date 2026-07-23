@@ -22,6 +22,19 @@ export default defineConfig({
         'src/main/srt.ts',
         'src/main/peaks-cache.ts',
       ],
+      // Vitest 4 measures every file matched by `include`, even ones no test
+      // imports. These are UI / side-effect modules (DOM notifications, theme
+      // application, waveform canvas rendering, format helpers, debug logging,
+      // preview) that carry no unit tests by design — exclude them so the
+      // thresholds keep gating the tested core logic, matching pre-v4 behavior.
+      exclude: [
+        'src/renderer/src/lib/notify.ts',
+        'src/renderer/src/lib/sub-format.tsx',
+        'src/renderer/src/lib/theme.ts',
+        'src/renderer/src/lib/waveform.ts',
+        'src/shared/agent-debug.ts',
+        'src/shared/preview.ts',
+      ],
       reporter: ['text', 'html'],
       // Fail the suite (and CI) if coverage on the included core modules drops
       // below these floors. Set a few points under the current numbers so the
