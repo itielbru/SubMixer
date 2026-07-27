@@ -45,7 +45,7 @@
     "chardet": "^2.2.0",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.9",
-    "iconv-lite": "^0.7.2"
+    "iconv-lite": "^0.7.3"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
