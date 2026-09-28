@@ -27,6 +27,14 @@ All notable changes to SubMixer are documented here. This project adheres to
   (and never replaces an existing file); an interrupted audio-preview extraction
   is no longer reused as a complete cached preview.
 
+- **Drag and drop**: dropping a video or subtitle file did nothing (Electron 32+
+  removed `File.path`); it works again.
+- **Output name**: `The Movie (2024).mkv` no longer becomes
+  `The Movie (2024) (2024).mkv`; title and year are read from release-style names.
+- **Size estimate** showed GB for MB (a 46 MB file read "~46 GB"); the encoding
+  menu now shows the detected encoding; resolution no longer renders reversed in
+  the Hebrew UI.
+
 ### Security
 
 - `window.open` links are handed to the OS only for `https:` URLs; the unused
