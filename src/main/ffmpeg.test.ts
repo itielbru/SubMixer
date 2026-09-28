@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExportArgs, escapeFilterPath } from './ffmpeg';
+import { buildExportArgs, escapeFilterPath, inferTitle } from './ffmpeg';
 import type { ExportPlan } from '@shared/types';
 
 function plan(overrides: Partial<ExportPlan> = {}): ExportPlan {
@@ -84,5 +84,20 @@ describe('escapeFilterPath', () => {
   it('escapes Windows drive colons, apostrophes, and filtergraph separators', () => {
     expect(escapeFilterPath("C:\\Users\\O'Brien\\a.srt")).toBe("C\\\\:/Users/O\\\\\\'Brien/a.srt");
     expect(escapeFilterPath('/tmp/a,b[1];c.srt')).toBe('/tmp/a\\,b\\[1\\]\\;c.srt');
+  });
+});
+
+describe('inferTitle', () => {
+  it.each([
+    ['The Movie (2024).mkv', 'The Movie', '2024'],
+    ['The.Movie.2024.1080p.BluRay.x264.mkv', 'The Movie', '2024'],
+    ['The_Movie_1999_720p.mp4', 'The Movie', '1999'],
+    ['Blade Runner 2049 (2017).mkv', 'Blade Runner 2049', '2017'],
+    ['Movie.1080p.mkv', 'Movie 1080p', ''],
+    ['2012.mkv', '2012', ''],
+    ['2001.A.Space.Odyssey.1968.mkv', '2001 A Space Odyssey', '1968'],
+    ['Blade.Runner.2049.2017.1080p.mkv', 'Blade Runner 2049', '2017'],
+  ])('%s → %s / %s', (name, title, year) => {
+    expect(inferTitle(name)).toEqual({ title, year });
   });
 });

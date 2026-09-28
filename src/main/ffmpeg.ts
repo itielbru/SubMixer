@@ -194,16 +194,21 @@ function evalFraction(frac: string | undefined): number {
   return d ? n / d : Number(frac) || 0;
 }
 
-function inferTitle(filename: string): { title: string; year: string } {
+/**
+ * Split a release-style file name into title + year:
+ * "The Movie (2024).mkv" and "The.Movie.2024.1080p.mkv" → { "The Movie", "2024" }.
+ * The year must stand alone (not part of "1080p") and not open the name
+ * ("2001.A.Space.Odyssey.1968" → year 1968).
+ */
+export function inferTitle(filename: string): { title: string; year: string } {
   const base = filename.replace(/\.[^.]+$/, '');
-  const yearMatch = base.match(/(19|20)\d{2}/);
-  const year = yearMatch ? yearMatch[0] : '';
-  const title = base
-    .split(/[._]/)
-    .slice(0, yearMatch ? base.split(/[._]/).findIndex((p) => p === yearMatch[0]) : undefined)
-    .join(' ')
-    .trim() || base;
-  return { title, year };
+  // Prefer "(2017)"; otherwise the last standalone year ("Blade Runner 2049 2017").
+  const years = [...base.matchAll(/[\s._([-]((?:19|20)\d{2})(?=$|[\s._)\]-])/g)];
+  const m = years.find((y) => /[([]$/.test(y[0][0])) ?? years[years.length - 1];
+  const clean = (s: string) =>
+    s.replace(/[._]+/g, ' ').replace(/[\s([-]+$/, '').replace(/\s+/g, ' ').trim();
+  if (!m) return { title: clean(base) || base, year: '' };
+  return { title: clean(base.slice(0, m.index)) || clean(base) || base, year: m[1] };
 }
 
 function streamToTrack(stream: FFProbeStream, isFirstVideo: boolean): Track | null {
@@ -324,12 +329,12 @@ export async function probe(filePath: string): Promise<MediaFile> {
 
   const fileName = path.basename(filePath);
   const baseName = fileName.replace(/\.[^.]+$/, '');
-  const { year } = inferTitle(fileName);
+  const { title, year } = inferTitle(fileName);
 
   return {
     path: filePath,
     name: fileName,
-    title: baseName,
+    title: title || baseName,
     year,
     container,
     size: fmtBytes(stat.size),
