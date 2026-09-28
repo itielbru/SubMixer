@@ -6,6 +6,32 @@ All notable changes to SubMixer are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-28
+
+### Fixed
+
+- **Subtitle encoding detection**: non-Hebrew files with accented or non-Latin
+  letters (French/Spanish UTF-8, Russian, Arabic, …) were decoded as
+  windows-1255 and showed up as garbage. Valid UTF-8 now always wins; Hebrew is
+  chosen only when the content really reads as Hebrew. A manually chosen
+  encoding is always honoured.
+- **Invalid SRT timestamps**: times such as 1.9996 s were written as
+  `00:00:01,1000`; they now round correctly to `00:00:02,000`.
+- **Default / forced flags**: unticking "default" on a track now actually clears
+  the flag in the output (it was inherited from the source).
+- **Batch queue with edited subtitles**: jobs after the first failed because the
+  edited-subtitle temp files were deleted by the previous export.
+- **Burn-in**: other external subtitles are still muxed as soft tracks, and
+  paths containing apostrophes, commas or brackets no longer break the filter.
+- **Partial files**: a cancelled or failed export leaves no half-written output
+  (and never replaces an existing file); an interrupted audio-preview extraction
+  is no longer reused as a complete cached preview.
+
+### Security
+
+- `window.open` links are handed to the OS only for `https:` URLs; the unused
+  `shell:openPath` IPC channel was removed and `srt:save` validates its paths.
+
 ### Changed
 
 - **IPC result types**: unified the per-channel `{ ok; payload?; error? }` shapes
