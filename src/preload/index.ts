@@ -125,7 +125,6 @@ const api = {
   },
 
   shellOps: {
-    openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:openPath', p),
     showItem: (p: string): Promise<void> => ipcRenderer.invoke('shell:showItem', p),
     userDataPath: (): Promise<string> => ipcRenderer.invoke('shell:userData'),
   },
