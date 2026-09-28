@@ -8,9 +8,8 @@
  *   npm run test:e2e
  */
 
-import { test, expect } from '@playwright/test';
-import { _electron as electron } from 'playwright';
-import type { ElectronApplication, Page } from 'playwright';
+import { test, expect, _electron as electron } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 import * as path from 'path';
 
 let app: ElectronApplication;
