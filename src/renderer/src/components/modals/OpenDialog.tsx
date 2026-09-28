@@ -56,8 +56,9 @@ export function OpenDialog({ recents, onClose, onPick, onBrowse }: OpenDialogPro
           onDrop={(e) => {
             e.preventDefault();
             setDrag(false);
-            const f = e.dataTransfer.files[0] as File & { path?: string };
-            if (f?.path) onPick(f.path);
+            const f = e.dataTransfer.files[0];
+            const p = f ? window.api.files.pathFor(f) : '';
+            if (p) onPick(p);
           }}
         >
           <Ico d={I.upload} size={20} />

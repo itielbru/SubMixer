@@ -22,6 +22,19 @@ interface Props {
   onDropFiles?: (paths: string[]) => void;
 }
 
+const ENCODINGS = ['UTF-8', 'Windows-1255', 'Windows-1252', 'UTF-16'];
+
+/** Map a detected encoding (e.g. "windows-1255") onto the matching menu entry. */
+function encodingOption(enc: string): string {
+  return ENCODINGS.find((e) => e.toLowerCase() === enc.toLowerCase()) ?? enc;
+}
+
+/** Menu entries, plus the detected encoding when it isn't one of them (e.g. windows-1251). */
+function encodingOptions(enc: string): string[] {
+  const cur = encodingOption(enc);
+  return ENCODINGS.includes(cur) || !cur ? ENCODINGS : [...ENCODINGS, cur];
+}
+
 export function SubsDrawer({
   extSubs,
   activeSubId,
@@ -57,8 +70,8 @@ export function SubsDrawer({
     setDragOver(false);
     if (!onDropFiles) return;
     const paths = Array.from(e.dataTransfer.files)
-      .filter((f) => /\.(srt|vtt|ass|ssa)$/i.test((f as unknown as { path: string }).path || f.name))
-      .map((f) => (f as unknown as { path: string }).path)
+      .filter((f) => /\.(srt|vtt|ass|ssa)$/i.test(f.name))
+      .map((f) => window.api.files.pathFor(f))
       .filter(Boolean);
     if (paths.length > 0) onDropFiles(paths);
   }, [onDropFiles]);
@@ -271,9 +284,9 @@ export function SubsDrawer({
           <div className="field">
             <label>{t('sub_encoding')}</label>
             <Dropdown
-              value={sub.encoding}
+              value={encodingOption(sub.encoding)}
               onChange={(v) => onUpdateSub(sub.id, { encoding: v })}
-              options={['UTF-8', 'Windows-1255', 'Windows-1252', 'UTF-16']}
+              options={encodingOptions(sub.encoding)}
             />
           </div>
           <div className="flag-row">
@@ -307,4 +320,4 @@ export function SubsDrawer({
     </aside>
   );
 }
-
+

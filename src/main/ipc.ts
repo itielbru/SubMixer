@@ -29,7 +29,7 @@ import {
   writeTransformedSrt,
   exportTransformedSrt,
   writeCuesToFile,
-  clearTempSrt,
+  removeTempFiles,
 } from './srt';
 import { buildMenu } from './menu';
 import {
@@ -318,6 +318,10 @@ export function registerIpc(): void {
     encoding?: string;
   }) => {
     try {
+      assertString(args?.sourcePath, 'sourcePath');
+      assertAbsPath(args.sourcePath, 'sourcePath');
+      assertString(args.destPath, 'destPath');
+      assertAbsPath(args.destPath, 'destPath');
       await exportTransformedSrt(args.sourcePath, args.destPath, {
         offset: args.offset,
         speed: args.speed,
@@ -445,6 +449,7 @@ export function registerIpc(): void {
     path: string; offset: number; speed: number; encoding?: string;
   }[]) => {
     const win = senderWindow(event);
+    let processed: string[] = [];
     try {
       assertString(plan?.inputFile, 'plan.inputFile');
       assertAbsPath(plan.inputFile, 'plan.inputFile');
@@ -456,7 +461,7 @@ export function registerIpc(): void {
       }
 
       // Normalize external subs to temp SRT (handles VTT/ASS + offset/speed + encoding)
-      const processed = await prepareExternalSubs(externalSubs);
+      processed = await prepareExternalSubs(externalSubs);
 
       const result = await runExport(
         plan,
@@ -466,7 +471,7 @@ export function registerIpc(): void {
         (line) => win?.webContents.send('export:log', line)
       );
 
-      // Reconstruct plan with original sub paths for history (temp paths are gone after clearTempSrt)
+      // Reconstruct plan with original sub paths for history (the temp SRTs are removed below)
       const planForHistory = {
         ...plan,
         externalSubs: plan.externalSubs.map((s, i) => ({
@@ -500,8 +505,6 @@ export function registerIpc(): void {
           durationSec,
         });
       }
-      // Clean up the temp SRTs after export
-      await clearTempSrt();
       return {
         ok: result.ok,
         code: result.code,
@@ -510,6 +513,10 @@ export function registerIpc(): void {
       };
     } catch (err) {
       return { ok: false, code: null, cancelled: false, error: (err as Error).message };
+    } finally {
+      // Only this export's temp SRTs: other files in the temp dir may belong to
+      // batch jobs that haven't run yet.
+      await removeTempFiles(processed);
     }
   });
 
@@ -522,7 +529,7 @@ export function registerIpc(): void {
     try {
       return buildCommandString(plan, processed);
     } finally {
-      await clearTempSrt();
+      await removeTempFiles(processed);
     }
   });
 
@@ -550,7 +557,6 @@ export function registerIpc(): void {
 
   ipcMain.handle('fs:exists', async (_e, p: string) => fs.stat(p).then(() => true).catch(() => false));
 
-  ipcMain.handle('shell:openPath', async (_e, p: string) => shell.openPath(p));
   ipcMain.handle('shell:showItem', async (_e, p: string) => shell.showItemInFolder(p));
   ipcMain.handle('shell:userData', async () => userDataPath());
 

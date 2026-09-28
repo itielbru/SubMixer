@@ -1,6 +1,6 @@
 {
   "name": "submixer",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "SubMixer — Mux video tracks and external subtitles, with offset/speed sync.",
   "main": "./out/main/index.js",
   "author": "Itiel",
@@ -50,6 +50,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -69,8 +70,6 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.62.1",
     "vite": "^7.0.0",
-    "vitest": "^4.1.9",
-    "@playwright/test": "^1.61.1",
-    "playwright": "^1.49.0"
+    "vitest": "^4.1.9"
   }
 }

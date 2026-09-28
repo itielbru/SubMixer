@@ -173,7 +173,8 @@ function AppContent({
       ]);
       setIsWin(plat === 'win32');
       setAppVer(ver);
-      setFfLine(ff.version ? ff.version.replace(/^ffmpeg\s+/i, '').slice(0, 42) : '');
+      const ffVer = ff.version?.match(/version\s+(\S+)/i)?.[1];
+      setFfLine(ffVer ? `FFmpeg ${ffVer}`.slice(0, 42) : '');
       setFfmpegOk(ff.available);
       setHistory(hist);
     })();
@@ -452,8 +453,9 @@ function AppContent({
   const onDropFile = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const f = e.dataTransfer.files[0] as File & { path?: string };
-    if (f?.path) void loadFile(f.path);
+    const f = e.dataTransfer.files[0];
+    const p = f ? window.api.files.pathFor(f) : '';
+    if (p) void loadFile(p);
   };
 
   const onSelectRow = (id: string) => {
@@ -557,7 +559,7 @@ function AppContent({
       if (tr.kind === 'A') droppedRatio += 0.05;
       else if (tr.kind === 'S') droppedRatio += 0.005;
     });
-    return file.sizeBytes * (1 - droppedRatio) * (1 / 1024);
+    return (file.sizeBytes * (1 - droppedRatio)) / (1024 * 1024); // bytes → MB (estMB)
   }, [file, tracks]);
 
   const audioCount = tracks.filter((t) => t.keep && t.kind === 'A').length;

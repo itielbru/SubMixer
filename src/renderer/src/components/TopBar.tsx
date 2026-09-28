@@ -64,7 +64,7 @@ export function TopBar({
           </div>
           <div className="stat">
             <span className="k">RES</span>
-            <span className="v mono">{file.res}</span>
+            <span className="v mono" dir="ltr">{file.res}</span>
           </div>
           <div className="stat">
             <span className="k">FPS</span>

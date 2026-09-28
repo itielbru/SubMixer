@@ -194,16 +194,21 @@ function evalFraction(frac: string | undefined): number {
   return d ? n / d : Number(frac) || 0;
 }
 
-function inferTitle(filename: string): { title: string; year: string } {
+/**
+ * Split a release-style file name into title + year:
+ * "The Movie (2024).mkv" and "The.Movie.2024.1080p.mkv" → { "The Movie", "2024" }.
+ * The year must stand alone (not part of "1080p") and not open the name
+ * ("2001.A.Space.Odyssey.1968" → year 1968).
+ */
+export function inferTitle(filename: string): { title: string; year: string } {
   const base = filename.replace(/\.[^.]+$/, '');
-  const yearMatch = base.match(/(19|20)\d{2}/);
-  const year = yearMatch ? yearMatch[0] : '';
-  const title = base
-    .split(/[._]/)
-    .slice(0, yearMatch ? base.split(/[._]/).findIndex((p) => p === yearMatch[0]) : undefined)
-    .join(' ')
-    .trim() || base;
-  return { title, year };
+  // Prefer "(2017)"; otherwise the last standalone year ("Blade Runner 2049 2017").
+  const years = [...base.matchAll(/[\s._([-]((?:19|20)\d{2})(?=$|[\s._)\]-])/g)];
+  const m = years.find((y) => /[([]$/.test(y[0][0])) ?? years[years.length - 1];
+  const clean = (s: string) =>
+    s.replace(/[._]+/g, ' ').replace(/[\s([-]+$/, '').replace(/\s+/g, ' ').trim();
+  if (!m) return { title: clean(base) || base, year: '' };
+  return { title: clean(base.slice(0, m.index)) || clean(base) || base, year: m[1] };
 }
 
 function streamToTrack(stream: FFProbeStream, isFirstVideo: boolean): Track | null {
@@ -324,12 +329,12 @@ export async function probe(filePath: string): Promise<MediaFile> {
 
   const fileName = path.basename(filePath);
   const baseName = fileName.replace(/\.[^.]+$/, '');
-  const { year } = inferTitle(fileName);
+  const { title, year } = inferTitle(fileName);
 
   return {
     path: filePath,
     name: fileName,
-    title: baseName,
+    title: title || baseName,
     year,
     container,
     size: fmtBytes(stat.size),
@@ -348,6 +353,7 @@ export async function probe(filePath: string): Promise<MediaFile> {
 const previewDir = () => path.join(app.getPath('userData'), 'temp', 'preview');
 
 let activePreview: ChildProcessWithoutNullStreams | null = null;
+let previewRunSeq = 0;
 
 export async function extractAudioPreview(
   filePath: string,
@@ -365,6 +371,11 @@ export async function extractAudioPreview(
   // Xing TOC, so a timeline jump lands the audio off from previewT and the
   // subtitle overlay drifts out of sync. M4A carries a sample-accurate seek table.
   const outPath = path.join(dir, `${jobId}.m4a`);
+  // Write to a .part file and rename on success, so a killed or timed-out
+  // extraction never leaves a truncated file that later looks like a cache hit.
+  // Unique per run: a superseded run for the same jobId must not delete the
+  // part file of the run that replaced it.
+  const partPath = path.join(dir, `${jobId}.${++previewRunSeq}.part.m4a`);
 
   // Cancel any in-flight extraction first
   if (activePreview && !activePreview.killed) {
@@ -391,7 +402,7 @@ export async function extractAudioPreview(
   if (limitSec && limitSec > 0) {
     args.push('-t', String(limitSec));
   }
-  args.push('-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', outPath);
+  args.push('-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', partPath);
 
   return new Promise((resolveP, rejectP) => {
     const child = spawn(status.ffmpegPath, args, { windowsHide: true });
@@ -418,11 +429,20 @@ export async function extractAudioPreview(
     });
 
     child.on('error', (err) => { clearTimeout(timer); rejectP(err); });
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       clearTimeout(timer);
-      activePreview = null;
-      if (code === 0) resolveP(outPath);
-      else rejectP(new Error(`ffmpeg exited with code ${code}`));
+      if (activePreview === child) activePreview = null;
+      if (code === 0) {
+        try {
+          await fs.rename(partPath, outPath);
+          resolveP(outPath);
+        } catch (err) {
+          rejectP(err);
+        }
+        return;
+      }
+      await fs.unlink(partPath).catch(() => null);
+      rejectP(new Error(`ffmpeg exited with code ${code}`));
     });
   });
 }
@@ -632,10 +652,23 @@ function parseFfmpegError(stderr: string): string {
   return 'FFmpeg export failed — open the FFmpeg command log for details.';
 }
 
-/** Escape a path for use inside the ffmpeg `subtitles=` filter value (wrapped in
- *  single quotes by the caller): forward slashes + escaped drive colon. */
-function escapeSubtitlesFilterPath(p: string): string {
-  return p.replace(/\\/g, '/').replace(/:/g, '\\:');
+/**
+ * Escape a path for an unquoted ffmpeg filter option value. ffmpeg unescapes
+ * twice: once for the option value (\\ ' :) and once for the filtergraph
+ * (\\ ' [ ] , ;). Backslashes become forward slashes first, which ffmpeg
+ * accepts on Windows too. Handles e.g. C:/Users/O'Brien/…
+ */
+export function escapeFilterPath(p: string): string {
+  const optionLevel = p.replace(/\\/g, '/').replace(/[\\':]/g, (c) => `\\${c}`);
+  return optionLevel.replace(/[\\'[\],;]/g, (c) => `\\${c}`);
+}
+
+/** Build the value for `-disposition`: explicit "0" clears flags inherited from the source. */
+function dispositionValue(t: { def: boolean; forced: boolean }): string {
+  const flags: string[] = [];
+  if (t.def) flags.push('default');
+  if (t.forced) flags.push('forced');
+  return flags.length ? flags.join('+') : '0';
 }
 
 export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): string[] {
@@ -648,14 +681,16 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
     burnIdx < processedSubPaths.length &&
     plan.videoTrackId !== null;
 
+  // External subs muxed as soft tracks. A burned sub is read directly by the
+  // subtitles filter, so it is not an input; any other external subs still are.
+  const softExt = plan.externalSubs
+    .map((s, i) => ({ s, path: processedSubPaths[i] }))
+    .filter((_, i) => !(burning && i === burnIdx));
+
   args.push('-i', plan.inputFile);
-  // External subs become inputs only when soft-muxing. A burned sub is read
-  // directly by the subtitles filter, so it is not added as an input.
-  if (!burning) {
-    for (const p of processedSubPaths) {
-      args.push('-sub_charenc', 'UTF-8');
-      args.push('-i', p);
-    }
+  for (const { path: p } of softExt) {
+    args.push('-sub_charenc', 'UTF-8');
+    args.push('-i', p);
   }
 
   if (plan.videoTrackId !== null) {
@@ -667,16 +702,12 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
   for (const s of plan.embeddedSubs) {
     args.push('-map', `0:${s.id}`);
   }
-  if (!burning) {
-    for (let i = 0; i < plan.externalSubs.length; i++) {
-      args.push('-map', `${i + 1}:0`);
-    }
-  }
+  softExt.forEach((_, i) => args.push('-map', `${i + 1}:0`));
 
   if (plan.videoTrackId !== null) {
     if (burning) {
-      const esc = escapeSubtitlesFilterPath(processedSubPaths[burnIdx]);
-      args.push('-vf', `subtitles='${esc}':force_style='Outline=2,Shadow=0'`);
+      const esc = escapeFilterPath(processedSubPaths[burnIdx]);
+      args.push('-vf', `subtitles=filename=${esc}:force_style='Outline=2,Shadow=0'`);
       args.push(...videoEncodeArgs(plan.videoEncode ?? DEFAULT_VIDEO_ENCODE));
     } else {
       args.push('-c:v', 'copy');
@@ -704,43 +735,28 @@ export function buildExportArgs(plan: ExportPlan, processedSubPaths: string[]): 
     }
     subOutIdx++;
   }
-  if (!burning) {
-    for (let i = 0; i < plan.externalSubs.length; i++) {
-      args.push(`-c:s:${subOutIdx + i}`, externalSubCodec);
-    }
-  }
+  softExt.forEach((_, i) => args.push(`-c:s:${subOutIdx + i}`, externalSubCodec));
 
   // Audio metadata + dispositions
   plan.audioTracks.forEach((a, idx) => {
     args.push(`-metadata:s:a:${idx}`, `language=${a.lang}`);
-    const disp: string[] = [];
-    if (a.def) disp.push('default');
-    if (a.forced) disp.push('forced');
-    if (disp.length) args.push(`-disposition:a:${idx}`, disp.join('+'));
+    args.push(`-disposition:a:${idx}`, dispositionValue(a));
   });
 
   // Subtitle metadata + dispositions (embedded first, then external)
   subOutIdx = 0;
   for (const s of plan.embeddedSubs) {
     args.push(`-metadata:s:s:${subOutIdx}`, `language=${s.lang}`);
-    const disp: string[] = [];
-    if (s.def) disp.push('default');
-    if (s.forced) disp.push('forced');
-    if (disp.length) args.push(`-disposition:s:${subOutIdx}`, disp.join('+'));
+    args.push(`-disposition:s:${subOutIdx}`, dispositionValue(s));
     subOutIdx++;
   }
-  if (!burning) {
-    for (const s of plan.externalSubs) {
-      args.push(`-metadata:s:s:${subOutIdx}`, `language=${s.lang}`);
-      if (s.trackName) {
-        args.push(`-metadata:s:s:${subOutIdx}`, `title=${s.trackName}`);
-      }
-      const disp: string[] = [];
-      if (s.def) disp.push('default');
-      if (s.forced) disp.push('forced');
-      if (disp.length) args.push(`-disposition:s:${subOutIdx}`, disp.join('+'));
-      subOutIdx++;
+  for (const { s } of softExt) {
+    args.push(`-metadata:s:s:${subOutIdx}`, `language=${s.lang}`);
+    if (s.trackName) {
+      args.push(`-metadata:s:s:${subOutIdx}`, `title=${s.trackName}`);
     }
+    args.push(`-disposition:s:${subOutIdx}`, dispositionValue(s));
+    subOutIdx++;
   }
 
   if (plan.metadataTitle.trim()) {
@@ -777,7 +793,15 @@ export async function runExport(
 
   await fs.mkdir(path.dirname(plan.outputPath), { recursive: true });
 
-  const args = buildExportArgs(plan, processedSubPaths);
+  // Write next to the destination under a temp name (same extension, so ffmpeg
+  // picks the same muxer) and rename on success: a cancelled or failed export
+  // leaves no half-written file and never clobbers an existing one.
+  const ext = path.extname(plan.outputPath);
+  const tempOutput = path.join(
+    path.dirname(plan.outputPath),
+    `${path.basename(plan.outputPath, ext)}.submixer-partial${ext}`
+  );
+  const args = buildExportArgs({ ...plan, outputPath: tempOutput }, processedSubPaths);
 
   return new Promise((resolveP) => {
     const child = spawn(status.ffmpegPath, args, { windowsHide: true });
@@ -817,21 +841,31 @@ export async function runExport(
       }
     });
 
-    child.on('error', (err) => {
+    child.on('error', async (err) => {
       onLog(`error: ${err.message}`);
       activeExport = null;
+      await fs.unlink(tempOutput).catch(() => null);
       resolveP({ ok: false, code: null, cancelled, error: err.message });
     });
 
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       activeExport = null;
-      const ok = code === 0;
-      const parsedErr = ok || cancelled ? undefined : parseFfmpegError(stderrBuf);
+      if (code === 0 && !cancelled) {
+        try {
+          await fs.rename(tempOutput, plan.outputPath);
+          resolveP({ ok: true, code, cancelled });
+        } catch (err) {
+          await fs.unlink(tempOutput).catch(() => null);
+          resolveP({ ok: false, code, cancelled, error: (err as Error).message });
+        }
+        return;
+      }
+      await fs.unlink(tempOutput).catch(() => null);
       resolveP({
-        ok,
+        ok: false,
         code,
         cancelled,
-        error: parsedErr,
+        error: cancelled ? undefined : parseFfmpegError(stderrBuf),
       });
     });
   });

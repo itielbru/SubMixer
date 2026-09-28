@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron';
 import type {
   AppSettings,
   ProbeResult,
@@ -124,8 +124,12 @@ const api = {
     exists: (p: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', p),
   },
 
+  files: {
+    /** Absolute path of a dropped File (File.path was removed in Electron 32). */
+    pathFor: (f: File): string => webUtils.getPathForFile(f),
+  },
+
   shellOps: {
-    openPath: (p: string): Promise<string> => ipcRenderer.invoke('shell:openPath', p),
     showItem: (p: string): Promise<void> => ipcRenderer.invoke('shell:showItem', p),
     userDataPath: (): Promise<string> => ipcRenderer.invoke('shell:userData'),
   },

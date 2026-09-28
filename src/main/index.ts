@@ -47,7 +47,8 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    // Only hand web links to the OS; never file:// or custom protocol handlers.
+    if (/^https:\/\//i.test(details.url)) void shell.openExternal(details.url);
     return { action: 'deny' };
   });
 

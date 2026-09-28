@@ -1,5 +1,15 @@
 # SubMixer
 
+**Free Windows app to sync external subtitles to a video and mux them into MKV/MP4.**
+Built for Hebrew subtitles (windows-1255 / RTL) and works with any language: fix subtitle
+timing (offset, speed / frame-rate drift, visual or audio-based auto-sync), choose which audio and
+subtitle tracks to keep, set default/forced flags, burn in subtitles, or just save a synced SRT.
+SRT, VTT and ASS/SSA; FFmpeg is bundled. [Download the latest release →](https://github.com/itielbru/SubMixer/releases/latest)
+
+![SubMixer: a Hebrew subtitle loaded next to a video, with sync controls and export options](docs/screenshot.png)
+
+---
+
 אפליקציית **Electron + React + TypeScript** לניהול מסלולים בקובץ וידאו, כתוביות חיצוניות (SRT/VTT/ASS), תצוגה מקדימה אודיו-only, וייצוא דרך **FFmpeg**.
 
 ## הורדה
